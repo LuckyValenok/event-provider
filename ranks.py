@@ -1,8 +1,9 @@
-import enum
+from enum import Enum
 
 
-class Rank(enum.Enum):
-    user = 1
-    moder = 2
-    organizer = 3
-    admin = 4
+class Rank(Enum):
+    USER = 1
+    MODER = 2
+    ORGANIZER = 3
+    MANAGER = 4
+    ADMIN = 5
