@@ -1,4 +1,4 @@
-from secret import tg_token
+from .secret import tg_token
 
 DATABASE_NAME = 'events.db'
 
