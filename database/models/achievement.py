@@ -1,11 +1,9 @@
-from sqlalchemy import Column, VARCHAR, SMALLINT, Integer
+from sqlalchemy import Column, VARCHAR
 
 from .base import BaseModel
 
 
-class achievement(BaseModel):
+class Achievement(BaseModel):
     __tablename__ = 'achievement'
 
-    achievement_id = Column(Integer, nullable=False, unique=True, primary_key=True)
-    achievement_name = Column(VARCHAR(255), nullable=False)
-
+    name = Column(VARCHAR(255), nullable=False)

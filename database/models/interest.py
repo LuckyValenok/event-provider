@@ -1,11 +1,9 @@
-from sqlalchemy import Column, VARCHAR, SMALLINT, Integer
+from sqlalchemy import Column, VARCHAR
 
 from .base import BaseModel
 
 
-class interest(BaseModel):
+class Interest(BaseModel):
     __tablename__ = 'interest'
 
-    interest_id = Column(Integer, nullable=False, unique=True, primary_key=True)
-    interest_name = Column(VARCHAR(255), nullable=False)
-
+    name = Column(VARCHAR(255), nullable=False)

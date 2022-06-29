@@ -1,11 +1,9 @@
-from sqlalchemy import Column, VARCHAR, SMALLINT, Integer, DateTime
+from sqlalchemy import Column, VARCHAR
 
 from .base import BaseModel
 
 
-class local_group(BaseModel):
+class LocalGroup(BaseModel):
     __tablename__ = 'local_group'
 
-    local_group_id = Column(Integer, nullable=False, unique=True, primary_key=True)
-    local_group_name = Column(VARCHAR(255), nullable=False)
-
+    name = Column(VARCHAR(255), nullable=False)
