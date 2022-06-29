@@ -1,21 +1,11 @@
 from sqlalchemy import Column, VARCHAR, SMALLINT, Integer, ForeignKey
+from sqlalchemy.orm import relation
 
+from ranks import Rank
 from .base import BaseModel
-
-
-class User(BaseModel):
-    __tablename__ = 'user'
-
-    BaseModel.id = Column(Integer, nullable=False, unique=True, primary_key=True)
-    first_name = Column(VARCHAR(255), nullable=False)
-    middle_name = Column(VARCHAR(255), nullable=False)
-    last_name = Column(VARCHAR(255), nullable=False)
-    email = Column(VARCHAR(255), nullable=True, unique=True)
-    phone = Column(VARCHAR(255), nullable=True, unique=True)
-    rank = Column(SMALLINT(), nullable=False)
-
-    def __repr__(self):
-        return f'{self.first_name} {self.last_name}'
+from .achievement import Achievement
+from .interest import Interest
+from .local_group import LocalGroup
 
 
 class UserAchievements(BaseModel):
@@ -37,3 +27,31 @@ class UserGroups(BaseModel):
 
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     group_id = Column(Integer, ForeignKey('local_group.id', ondelete='CASCADE'), nullable=False, index=True)
+
+
+class User(BaseModel):
+    __tablename__ = 'user'
+
+    BaseModel.id = Column(Integer, nullable=False, unique=True, primary_key=True)
+    first_name = Column(VARCHAR(255), nullable=False)
+    middle_name = Column(VARCHAR(255), nullable=False)
+    last_name = Column(VARCHAR(255), nullable=False)
+    email = Column(VARCHAR(255), nullable=True, unique=True)
+    phone = Column(VARCHAR(255), nullable=True, unique=True)
+    rank_id = Column(SMALLINT(), nullable=False)
+
+    achievements = relation(
+        Achievement,
+        secondary=UserAchievements.__tablename__
+    )
+    interests = relation(
+        Interest,
+        secondary=UserInterests.__tablename__
+    )
+    groups = relation(
+        LocalGroup,
+        secondary=UserGroups.__tablename__
+    )
+
+    def rank(self) -> Rank:
+        return Rank(self.rank_id)
