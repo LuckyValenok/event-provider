@@ -4,11 +4,13 @@ from .base import BaseModel
 
 
 class User(BaseModel):
-    __tablename__ = 'users'
+    __tablename__ = 'user'
 
-    BaseModel.id = Column(Integer, nullable=False, unique=True, primary_key=True)
+    user_id = Column(Integer, nullable=False, unique=True, primary_key=True)
     first_name = Column(VARCHAR(255), nullable=False)
+    middle_name = Column(VARCHAR(255), nullable=False)
     last_name = Column(VARCHAR(255), nullable=False)
+    email = Column(VARCHAR(255), nullable=False, unique=True)
     phone = Column(VARCHAR(255), unique=True, nullable=True)
     rank = Column(SMALLINT(), nullable=False)
 
