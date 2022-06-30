@@ -1,7 +1,8 @@
 from sqlalchemy import Column, VARCHAR, SMALLINT, Integer, ForeignKey
 from sqlalchemy.orm import relation
 
-from ranks import Rank
+from enums.ranks import Rank
+from enums.steps import Step
 from .base import BaseModel
 from .achievement import Achievement
 from .interest import Interest
@@ -33,12 +34,13 @@ class User(BaseModel):
     __tablename__ = 'user'
 
     BaseModel.id = Column(Integer, nullable=False, unique=True, primary_key=True)
-    first_name = Column(VARCHAR(255), nullable=False)
-    middle_name = Column(VARCHAR(255), nullable=False)
-    last_name = Column(VARCHAR(255), nullable=False)
+    first_name = Column(VARCHAR(255), nullable=True)
+    middle_name = Column(VARCHAR(255), nullable=True)
+    last_name = Column(VARCHAR(255), nullable=True)
     email = Column(VARCHAR(255), nullable=True, unique=True)
     phone = Column(VARCHAR(255), nullable=True, unique=True)
     rank_id = Column(SMALLINT(), nullable=False)
+    step_id = Column(Integer, nullable=False)
 
     achievements = relation(
         Achievement,
@@ -55,3 +57,6 @@ class User(BaseModel):
 
     def rank(self) -> Rank:
         return Rank(self.rank_id)
+
+    def step(self) -> Step:
+        return Step(self.step_id)

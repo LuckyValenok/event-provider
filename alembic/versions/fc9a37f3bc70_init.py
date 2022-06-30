@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 710cd093f986
+Revision ID: fc9a37f3bc70
 Revises: 
-Create Date: 2022-06-29 19:33:47.523419
+Create Date: 2022-06-30 09:04:54.772646
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '710cd093f986'
+revision = 'fc9a37f3bc70'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -23,6 +23,16 @@ def upgrade() -> None:
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('name', sa.VARCHAR(length=255), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('id')
+    )
+    op.create_table('event',
+    sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.VARCHAR(length=255), nullable=False),
+    sa.Column('description', sa.VARCHAR(length=255), nullable=False),
+    sa.Column('date', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('id')
     )
@@ -46,17 +56,57 @@ def upgrade() -> None:
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('first_name', sa.VARCHAR(length=255), nullable=False),
-    sa.Column('middle_name', sa.VARCHAR(length=255), nullable=False),
-    sa.Column('last_name', sa.VARCHAR(length=255), nullable=False),
+    sa.Column('first_name', sa.VARCHAR(length=255), nullable=True),
+    sa.Column('middle_name', sa.VARCHAR(length=255), nullable=True),
+    sa.Column('last_name', sa.VARCHAR(length=255), nullable=True),
     sa.Column('email', sa.VARCHAR(length=255), nullable=True),
     sa.Column('phone', sa.VARCHAR(length=255), nullable=True),
     sa.Column('rank_id', sa.SMALLINT(), nullable=False),
+    sa.Column('step_id', sa.Integer(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('id'),
     sa.UniqueConstraint('phone')
     )
+    op.create_table('event_groups',
+    sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('event_id', sa.Integer(), nullable=False),
+    sa.Column('group_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['event_id'], ['event.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['group_id'], ['local_group.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('id')
+    )
+    op.create_index(op.f('ix_event_groups_event_id'), 'event_groups', ['event_id'], unique=False)
+    op.create_index(op.f('ix_event_groups_group_id'), 'event_groups', ['group_id'], unique=False)
+    op.create_table('event_interests',
+    sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('event_id', sa.Integer(), nullable=False),
+    sa.Column('interest_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['event_id'], ['event.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['interest_id'], ['interest.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('id')
+    )
+    op.create_index(op.f('ix_event_interests_event_id'), 'event_interests', ['event_id'], unique=False)
+    op.create_index(op.f('ix_event_interests_interest_id'), 'event_interests', ['interest_id'], unique=False)
+    op.create_table('event_users',
+    sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('event_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['event_id'], ['event.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('id')
+    )
+    op.create_index(op.f('ix_event_users_event_id'), 'event_users', ['event_id'], unique=False)
+    op.create_index(op.f('ix_event_users_user_id'), 'event_users', ['user_id'], unique=False)
     op.create_table('user_achievements',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
@@ -110,8 +160,18 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_user_achievements_user_id'), table_name='user_achievements')
     op.drop_index(op.f('ix_user_achievements_achievement_id'), table_name='user_achievements')
     op.drop_table('user_achievements')
+    op.drop_index(op.f('ix_event_users_user_id'), table_name='event_users')
+    op.drop_index(op.f('ix_event_users_event_id'), table_name='event_users')
+    op.drop_table('event_users')
+    op.drop_index(op.f('ix_event_interests_interest_id'), table_name='event_interests')
+    op.drop_index(op.f('ix_event_interests_event_id'), table_name='event_interests')
+    op.drop_table('event_interests')
+    op.drop_index(op.f('ix_event_groups_group_id'), table_name='event_groups')
+    op.drop_index(op.f('ix_event_groups_event_id'), table_name='event_groups')
+    op.drop_table('event_groups')
     op.drop_table('user')
     op.drop_table('local_group')
     op.drop_table('interest')
+    op.drop_table('event')
     op.drop_table('achievement')
     # ### end Alembic commands ###
