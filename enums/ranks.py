@@ -1,6 +1,7 @@
-from enum import Enum
+from enum import Enum, unique
 
 
+@unique
 class Rank(Enum):
     USER = 1
     MODER = 2

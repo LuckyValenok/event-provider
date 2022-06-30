@@ -1,4 +1,4 @@
-from sqlalchemy import Column, VARCHAR, SMALLINT, Integer, ForeignKey
+from sqlalchemy import Column, VARCHAR, Integer, ForeignKey, Enum
 from sqlalchemy.orm import relation
 
 from enums.ranks import Rank
@@ -39,8 +39,8 @@ class User(BaseModel):
     last_name = Column(VARCHAR(255), nullable=True)
     email = Column(VARCHAR(255), nullable=True, unique=True)
     phone = Column(VARCHAR(255), nullable=True, unique=True)
-    rank_id = Column(SMALLINT(), nullable=False)
-    step_id = Column(Integer, nullable=False)
+    rank = Column(Enum(Rank), nullable=False)
+    step = Column(Enum(Step), nullable=False)
 
     achievements = relation(
         Achievement,
@@ -54,9 +54,3 @@ class User(BaseModel):
         LocalGroup,
         secondary=UserGroups.__tablename__
     )
-
-    def rank(self) -> Rank:
-        return Rank(self.rank_id)
-
-    def step(self) -> Step:
-        return Step(self.step_id)

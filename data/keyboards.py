@@ -1,5 +1,7 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup
 
-rank_selection_keyboard = InlineKeyboardMarkup()
-rank_selection_keyboard.add(InlineKeyboardButton('Пользователь', callback_data='set_user'),
-                            InlineKeyboardButton('Организатор', callback_data='set_organizer'))
+from enums.ranks import Rank
+
+keyboards_by_rank = {
+    Rank.USER: ReplyKeyboardMarkup(resize_keyboard=True).add(*['Все мероприятия', 'Мои мероприятия', 'Настройки'])
+}

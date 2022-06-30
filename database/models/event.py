@@ -1,14 +1,8 @@
-from sqlalchemy import Column, VARCHAR, DateTime, ForeignKey, Integer
+from sqlalchemy import Column, VARCHAR, ForeignKey, Integer, TIMESTAMP, Float
+from sqlalchemy.orm import relation
 
+from . import User, Interest, LocalGroup
 from .base import BaseModel
-
-
-class Event(BaseModel):
-    __tablename__ = 'event'
-
-    name = Column(VARCHAR(255), nullable=False)
-    description = Column(VARCHAR(255), nullable=False)
-    date = Column(DateTime, nullable=False)
 
 
 class EventGroups(BaseModel):
@@ -30,3 +24,26 @@ class EventUsers(BaseModel):
 
     event_id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+
+
+class Event(BaseModel):
+    __tablename__ = 'event'
+
+    name = Column(VARCHAR(255), nullable=False)
+    description = Column(VARCHAR(255), nullable=True)
+    date = Column(TIMESTAMP, nullable=True)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+
+    users = relation(
+        User,
+        secondary=EventUsers.__tablename__
+    )
+    interests = relation(
+        Interest,
+        secondary=EventInterests.__tablename__
+    )
+    groups = relation(
+        LocalGroup,
+        secondary=EventGroups.__tablename__
+    )
