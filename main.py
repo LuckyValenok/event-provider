@@ -10,6 +10,7 @@ from data.keyboards import keyboards_by_rank
 from database.base import DBSession
 from database.models.user import User
 from database.queries import users
+from datainputs import get_data_input
 from enums.ranks import Rank
 from enums.steps import Step
 
@@ -50,35 +51,12 @@ async def send_menu(message: types.Message):
 @dp.message_handler()
 async def send_other(message: types.Message):
     user = users.get_user_by_id(db_session, message.from_user.id)
-    if user.step == Step.ENTER_FIRST_NAME:
-        user.first_name = message.text
-        user.step = Step.ENTER_MIDDLE_NAME
-        db_session.commit_session()
-        await message.answer('Теперь введите отчество')
-    elif user.step == Step.ENTER_MIDDLE_NAME:
-        user.middle_name = message.text
-        user.step = Step.ENTER_LAST_NAME
-        db_session.commit_session()
-        await message.answer('Теперь введите фамилию')
-    elif user.step == Step.ENTER_LAST_NAME:
-        user.last_name = message.text
-        user.step = Step.ENTER_PHONE
-        db_session.commit_session()
-        await message.answer(f'Приятно познакомиться, {user.first_name} {user.middle_name} {user.last_name}'
-                             f'\n\n'
-                             f'Пожалуйста, введите ваш номер телефона')
-    elif user.step == Step.ENTER_PHONE:
-        user.phone = message.text
-        user.step = Step.ENTER_EMAIL
-        db_session.commit_session()
-        await message.answer('Остался последний шаг! Введите e-mail')
-    elif user.step == Step.ENTER_EMAIL:
-        user.email = message.text
-        user.step = Step.NONE
-        db_session.commit_session()
-        await message.answer('Вы успешно авторизованы', reply_markup=keyboards_by_rank[user.rank])
-    else:
-        command = get_command(user, message.text)
+    data_input = get_data_input(user, message.text)
+    if data_input is not None:
+        await message.answer(data_input.input(db_session, user, message.text))
+        return
+    command = get_command(user, message.text)
+    if command is not None:
         await message.answer(command.execute(db_session, user, message.text))
 
 
