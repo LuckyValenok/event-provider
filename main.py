@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from data import config
+from data.commands import get_command
 from data.keyboards import keyboards_by_rank
 from database.base import DBSession
 from database.models.user import User
@@ -12,7 +13,7 @@ from database.queries import users
 from enums.ranks import Rank
 from enums.steps import Step
 
-engine = create_engine(f'sqlite:///{config.DATABASE_NAME}')
+engine = create_engine(f'sqlite:///{config.DATABASE_NAME}', echo=True)
 session_factory = sessionmaker(bind=engine)
 db_session = DBSession(session_factory())
 
@@ -34,6 +35,16 @@ async def send_welcome(message: types.Message):
                              f'мероприятий'
                              f'\n\n'
                              f'Пожалуйста, напиши свое имя')
+
+
+@dp.message_handler(commands=['menu'])
+async def send_menu(message: types.Message):
+    user = users.get_user_by_id(db_session, message.from_user.id)
+
+    if user.step != Step.NONE:
+        await message.answer('Для начала завершите предыдущее действие, пожалуйста')
+    else:
+        await message.answer('Буп', reply_markup=keyboards_by_rank[user.rank])
 
 
 @dp.message_handler()
@@ -65,9 +76,10 @@ async def send_other(message: types.Message):
         user.email = message.text
         user.step = Step.NONE
         db_session.commit_session()
-        await message.answer('Вы успешно авторизованы')
+        await message.answer('Вы успешно авторизованы', reply_markup=keyboards_by_rank[user.rank])
     else:
-        await message.answer('Буп', reply_markup=keyboards_by_rank[user.rank])
+        command = get_command(user, message.text)
+        await message.answer(command.execute(db_session, user, message.text))
 
 
 if __name__ == '__main__':
