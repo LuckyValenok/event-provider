@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from database.queries.users import get_events_by_user
 from enums.ranks import Rank
+from enums.steps import Step
 
 
 class Command(ABC):
@@ -23,6 +24,16 @@ class GetMyEventsCommand(Command, ABC):
         return user.rank == Rank.USER and 'мои мероприятия' in text.lower()
 
 
+class AddManagerCommand(Command, ABC):
+    def execute(self, db_session, user, text) -> str:
+        user.step = Step.ENTER_NEW_MANAGER_ID
+        db_session.commit_session()
+        return 'Ввведите ID нового менеджера'
+
+    def can_execute(self, user, text) -> bool:
+        return user.rank == Rank.ADMIN and 'добавить менеджера' in text.lower()
+
+
 class UnknownCommand(Command, ABC):
     def execute(self, db_session, user, text) -> str:
         return 'Неизвестная команда'
@@ -32,7 +43,7 @@ class UnknownCommand(Command, ABC):
 
 
 # UnknownCommand нужно оставлять последней
-commands = [GetMyEventsCommand(), UnknownCommand()]
+commands = [GetMyEventsCommand(), AddManagerCommand(), UnknownCommand()]
 
 
 def get_command(user, text) -> Command:

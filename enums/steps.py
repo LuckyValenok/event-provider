@@ -9,3 +9,4 @@ class Step(Enum):
     ENTER_LAST_NAME = 3,
     ENTER_PHONE = 4,
     ENTER_EMAIL = 5,
+    ENTER_NEW_MANAGER_ID = 6,

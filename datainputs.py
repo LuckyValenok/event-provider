@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 
+from sqlalchemy.exc import NoResultFound
+
+from database.queries.users import get_user_by_id
+from enums.ranks import Rank
 from enums.steps import Step
 
 
@@ -16,8 +20,8 @@ class DataInput(ABC):
         pass
 
     def input(self, db_session, user, text) -> str:
-        answer = self.abstract_input(db_session, user, text)
         user.step = self.to_step
+        answer = self.abstract_input(db_session, user, text)
         db_session.commit_session()
         return answer
 
@@ -72,11 +76,34 @@ class EmailInput(DataInput, ABC):
         return True
 
 
+class ManagerIdInput(DataInput, ABC):
+    def abstract_input(self, db_session, user, text) -> str:
+        if 'отмена' in text.lower():
+            return 'Операция успешно отменена'
+        try:
+            uid = int(text)
+            try:
+                target_user = get_user_by_id(db_session, uid)
+                target_user.rank = Rank.MANAGER
+                return f'{target_user.first_name} {target_user.middle_name} {target_user.last_name} успешно назначен ' \
+                       f'менеджером'
+            except NoResultFound:
+                user.step = self.from_step
+                return f'Пользователя с таким ({text}) ID не существует. Попробуйте снова или напишите \'отмена\''
+        except ValueError:
+            user.step = self.from_step
+            return f'{text} - не число. Попробуйте снова или напишите \'отмена\''
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
 data_inputs = [FirstNameInput(Step.ENTER_FIRST_NAME, Step.ENTER_MIDDLE_NAME),
                MiddleNameInput(Step.ENTER_MIDDLE_NAME, Step.ENTER_LAST_NAME),
                LastNameInput(Step.ENTER_LAST_NAME, Step.ENTER_PHONE),
                PhoneInput(Step.ENTER_PHONE, Step.ENTER_EMAIL),
-               EmailInput(Step.ENTER_EMAIL, Step.NONE)]
+               EmailInput(Step.ENTER_EMAIL, Step.NONE),
+               ManagerIdInput(Step.ENTER_NEW_MANAGER_ID, Step.NONE)]
 
 
 def get_data_input(user, text):
