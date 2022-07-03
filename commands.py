@@ -84,7 +84,7 @@ class UnknownCommand(Command, ABC):
 
 
 # UnknownCommand нужно оставлять последней
-commands = [GetMyEventsCommand(), AddManagerCommand(), AddEventCommand(), UnknownCommand()]
+commands = [GetMyEventsCommand(), AddManagerCommand(), AddOrganizerCommand(), AddEventCommand(), UnknownCommand()]
 
 
 def get_command(user, text) -> Command:
