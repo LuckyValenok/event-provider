@@ -1,6 +1,10 @@
 import datetime
 from abc import ABC, abstractmethod
 
+from aiogram.types import Message
+
+from database.base import DBSession
+from database.models import User
 from database.queries.users import get_events_by_user
 from enums.ranks import Rank
 from enums.steps import Step
@@ -8,16 +12,16 @@ from enums.steps import Step
 
 class Command(ABC):
     @abstractmethod
-    def execute(self, db_session, user, text) -> str:
+    async def execute(self, db_session: DBSession, user: User, message: Message):
         pass
 
     @abstractmethod
-    def can_execute(self, user, text) -> bool:
+    def can_execute(self, user: User, message: Message) -> bool:
         pass
 
 
 class GetMyEventsCommand(Command, ABC):
-    def execute(self, db_session, user, text) -> str:
+    async def execute(self, db_session: DBSession, user: User, message: Message):
         events = get_events_by_user(db_session, user.id)
         current_timestamp = datetime.datetime.now().timestamp()
         str_events = []
@@ -37,57 +41,50 @@ class GetMyEventsCommand(Command, ABC):
 
             str_events.append(str_event)
 
-        return '\n\n'.join(str_events)
+        await message.answer('\n\n'.join(str_events))
 
-    def can_execute(self, user, text) -> bool:
+    def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
                 user.rank == Rank.MODER or
-                user.rank == Rank.ORGANIZER) and 'мои мероприятия' in text.lower()
+                user.rank == Rank.ORGANIZER) and 'мои мероприятия' in message.text.lower()
 
 
-class AddManagerCommand(Command, ABC):
-    def execute(self, db_session, user, text) -> str:
-        user.step = Step.ENTER_NEW_MANAGER_ID
+class AddSomethingCommand(Command, ABC):
+    rank: Rank
+    step: Step
+    name: str
+
+    def __init__(self, rank, step, name):
+        self.rank = rank
+        self.step = step
+        self.name = name
+
+    async def execute(self, db_session: DBSession, user: User, message: Message):
+        user.step = self.step
         db_session.commit_session()
-        return 'Ввведите ID нового менеджера'
+        await message.answer(f'Ввведите ID нового {self.name}')
 
-    def can_execute(self, user, text) -> bool:
-        return user.rank == Rank.ADMIN and 'добавить менеджера' in text.lower()
-
-
-class AddOrganizerCommand(Command, ABC):
-    def execute(self, db_session, user, text) -> str:
-        user.step = Step.ENTER_NEW_ORGANIZER_ID
-        db_session.commit_session()
-        return 'Ввведите ID нового организатора'
-
-    def can_execute(self, user, text) -> bool:
-        return user.rank == Rank.MANAGER and 'добавить организатора' in text.lower()
-
-
-class AddEventCommand(Command, ABC):
-    def execute(self, db_session, user, text) -> str:
-        user.step = Step.ENTER_NEW_EVENT_NAME
-        db_session.commit_session()
-        return 'Ввведите название нового мероприятия'
-
-    def can_execute(self, user, text) -> bool:
-        return user.rank == Rank.ORGANIZER and 'добавить мероприятие' in text.lower()
+    def can_execute(self, user: User, message: Message) -> bool:
+        return user.rank == self.rank and f'добавить {self.name}' in message.text.lower()
 
 
 class UnknownCommand(Command, ABC):
-    def execute(self, db_session, user, text) -> str:
-        return 'Неизвестная команда'
+    async def execute(self, db_session: DBSession, user: User, message: Message):
+        await message.answer('Неизвестная команда')
 
-    def can_execute(self, user, text) -> bool:
+    def can_execute(self, user: User, message: Message) -> bool:
         return True
 
 
 # UnknownCommand нужно оставлять последней
-commands = [GetMyEventsCommand(), AddManagerCommand(), AddOrganizerCommand(), AddEventCommand(), UnknownCommand()]
+commands = [GetMyEventsCommand(),
+            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'менеджера'),
+            AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'организатора'),
+            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'мероприятие'),
+            UnknownCommand()]
 
 
-def get_command(user, text) -> Command:
+def get_command(user, message) -> Command:
     for command in commands:
-        if command.can_execute(user, text):
+        if command.can_execute(user, message):
             return command

@@ -55,9 +55,9 @@ async def send_other(message: types.Message):
     if data_input is not None:
         await message.answer(data_input.input(db_session, user, message))
         return
-    command = get_command(user, message.text)
+    command = get_command(user, message)
     if command is not None:
-        await message.answer(command.execute(db_session, user, message.text))
+        await command.execute(db_session, user, message)
 
 
 if __name__ == '__main__':
