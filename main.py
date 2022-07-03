@@ -51,9 +51,9 @@ async def send_menu(message: types.Message):
 @dp.message_handler()
 async def send_other(message: types.Message):
     user = users.get_user_by_id(db_session, message.from_user.id)
-    data_input = get_data_input(user, message.text)
+    data_input = get_data_input(user, message)
     if data_input is not None:
-        await message.answer(data_input.input(db_session, user, message.text))
+        await message.answer(data_input.input(db_session, user, message))
         return
     command = get_command(user, message.text)
     if command is not None:

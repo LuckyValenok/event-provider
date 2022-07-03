@@ -10,3 +10,4 @@ class Step(Enum):
     ENTER_PHONE = 4,
     ENTER_EMAIL = 5,
     ENTER_NEW_MANAGER_ID = 6,
+    ENTER_NEW_EVENT_NAME = 7,
