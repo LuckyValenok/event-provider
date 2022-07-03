@@ -55,6 +55,16 @@ class AddManagerCommand(Command, ABC):
         return user.rank == Rank.ADMIN and 'добавить менеджера' in text.lower()
 
 
+class AddOrganizerCommand(Command, ABC):
+    def execute(self, db_session, user, text) -> str:
+        user.step = Step.ENTER_NEW_ORGANIZER_ID
+        db_session.commit_session()
+        return 'Ввведите ID нового организатора'
+
+    def can_execute(self, user, text) -> bool:
+        return user.rank == Rank.MANAGER and 'добавить организатора' in text.lower()
+
+
 class AddEventCommand(Command, ABC):
     def execute(self, db_session, user, text) -> str:
         user.step = Step.ENTER_NEW_EVENT_NAME

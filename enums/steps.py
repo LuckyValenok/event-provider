@@ -11,3 +11,4 @@ class Step(Enum):
     ENTER_EMAIL = 5,
     ENTER_NEW_MANAGER_ID = 6,
     ENTER_NEW_EVENT_NAME = 7,
+    ENTER_NEW_ORGANIZER_ID = 8,

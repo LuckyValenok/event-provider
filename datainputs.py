@@ -79,7 +79,16 @@ class EmailInput(DataInput, ABC):
         return True
 
 
-class ManagerIdInput(DataInput, ABC):
+class AppointAsInput(DataInput, ABC):
+    rank: Rank
+    name: str
+
+    def __init__(self, from_step, to_step, rank, name):
+        super().__init__(from_step, to_step)
+        self.rank = rank
+        self.name = name
+
+
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         text = message.text
         if 'отмена' in text.lower():
@@ -88,9 +97,9 @@ class ManagerIdInput(DataInput, ABC):
             uid = int(text)
             try:
                 target_user = get_user_by_id(db_session, uid)
-                target_user.rank = Rank.MANAGER
+                target_user.rank = self.rank
                 return f'{target_user.first_name} {target_user.middle_name} {target_user.last_name} успешно назначен ' \
-                       f'менеджером'
+                       f'{self.name}'
             except NoResultFound:
                 user.step = self.from_step
                 return f'Пользователя с таким ({text}) ID не существует. Попробуйте снова или напишите \'отмена\''
@@ -119,8 +128,9 @@ data_inputs = [FirstNameInput(Step.ENTER_FIRST_NAME, Step.ENTER_MIDDLE_NAME),
                LastNameInput(Step.ENTER_LAST_NAME, Step.ENTER_PHONE),
                PhoneInput(Step.ENTER_PHONE, Step.ENTER_EMAIL),
                EmailInput(Step.ENTER_EMAIL, Step.NONE),
-               ManagerIdInput(Step.ENTER_NEW_MANAGER_ID, Step.NONE),
-               EventNameInput(Step.ENTER_NEW_EVENT_NAME, Step.NONE)]
+               AppointAsInput(Step.ENTER_NEW_MANAGER_ID, Step.NONE, Rank.MANAGER, 'менеджером'),
+               EventNameInput(Step.ENTER_NEW_EVENT_NAME, Step.NONE),
+               AppointAsInput(Step.ENTER_NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором')]
 
 
 def get_data_input(user, message):
