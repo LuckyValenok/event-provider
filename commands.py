@@ -24,7 +24,6 @@ class GetMyEventsCommand(Command, ABC):
     async def execute(self, db_session: DBSession, user: User, message: Message):
         events = get_events_by_user(db_session, user.id)
         current_timestamp = datetime.datetime.now().timestamp()
-        str_events = []
         for event in events:
             if event.date is not None and current_timestamp > event.date:
                 continue
@@ -39,9 +38,7 @@ class GetMyEventsCommand(Command, ABC):
             else:
                 str_event += 'не назначены'
 
-            str_events.append(str_event)
-
-        await message.answer('\n\n'.join(str_events))
+            await message.answer(str_event)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
