@@ -70,20 +70,20 @@ class AddSomethingCommand(Command, ABC):
 class ManageSomethingCommand(Command, ABC):
     name: str
     model: BaseModel
-    keyboard: InlineKeyboardMarkup
 
     def __init__(self, name, model):
         self.name = name
         self.model = model
-        self.keyboard = InlineKeyboardMarkup()
-        self.keyboard.row(InlineKeyboardButton('Добавить', callback_data='add_' + self.model.__tablename__))
-        self.keyboard.row(InlineKeyboardButton('Удалить', callback_data='remove_' + self.model.__tablename__))
 
     async def execute(self, db_session: DBSession, user: User, message: Message):
         entities = db_session.query(self.model).all()
-        await message.answer(
-            f'{", ".join([entity.name for entity in entities]) if len(entities) != 0 else self.name + " пока отсутствуют"}',
-            reply_markup=self.keyboard)
+        keyboard = InlineKeyboardMarkup()
+        keyboard.row(InlineKeyboardButton('Добавить', callback_data='add_' + self.model.__tablename__))
+        if len(entities) != 0:
+            keyboard.row(InlineKeyboardButton('Удалить', callback_data='remove_' + self.model.__tablename__))
+        await message.answer(f'{self.name}: '
+                             f'{", ".join([entity.name for entity in entities]) if len(entities) != 0 else "пока отсутствуют"}',
+                             reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return user.rank == Rank.ADMIN and f'{self.name.lower()}' in message.text.lower()

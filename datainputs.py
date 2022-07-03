@@ -4,7 +4,7 @@ from aiogram.types import Message
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
-from database.models import User, Event
+from database.models import User, Event, Interest, Achievement, LocalGroup
 from database.queries.users import get_user_by_id
 from enums.ranks import Rank
 from enums.steps import Step
@@ -34,6 +34,9 @@ class DataInput(ABC):
 
 
 class FirstNameInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_FIRST_NAME, Step.NONE)
+
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.first_name = message.text
         return 'Теперь введите отчество'
@@ -43,6 +46,9 @@ class FirstNameInput(DataInput, ABC):
 
 
 class MiddleNameInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_MIDDLE_NAME, Step.NONE)
+
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.middle_name = message.text
         return 'Теперь введите фамилию'
@@ -52,6 +58,9 @@ class MiddleNameInput(DataInput, ABC):
 
 
 class LastNameInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_LAST_NAME, Step.NONE)
+
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.last_name = message.text
         return f'Приятно познакомиться, {user.first_name} {user.middle_name} {user.last_name}\n\nПожалуйста, введите ' \
@@ -62,6 +71,9 @@ class LastNameInput(DataInput, ABC):
 
 
 class PhoneInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_PHONE, Step.NONE)
+
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.phone = message.text
         return 'Остался последний шаг! Введите e-mail'
@@ -71,6 +83,9 @@ class PhoneInput(DataInput, ABC):
 
 
 class EmailInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_EMAIL, Step.NONE)
+
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.email = message.text
         return 'Вы успешно авторизованы'
@@ -87,7 +102,6 @@ class AppointAsInput(DataInput, ABC):
         super().__init__(from_step, to_step)
         self.rank = rank
         self.name = name
-
 
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         text = message.text
@@ -112,6 +126,9 @@ class AppointAsInput(DataInput, ABC):
 
 
 class EventNameInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_NEW_EVENT_NAME, Step.NONE)
+
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         event = Event(name=message.text)
         event.users.append(user)
@@ -123,14 +140,138 @@ class EventNameInput(DataInput, ABC):
         return True
 
 
-data_inputs = [FirstNameInput(Step.ENTER_FIRST_NAME, Step.ENTER_MIDDLE_NAME),
-               MiddleNameInput(Step.ENTER_MIDDLE_NAME, Step.ENTER_LAST_NAME),
-               LastNameInput(Step.ENTER_LAST_NAME, Step.ENTER_PHONE),
-               PhoneInput(Step.ENTER_PHONE, Step.ENTER_EMAIL),
-               EmailInput(Step.ENTER_EMAIL, Step.NONE),
+# Добавление/удаление интересов, групп и достижений требует переработки
+class AddInterestInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_INTEREST_NAME_FOR_ADD, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        new_name = message.text
+        if 'отмена' in new_name.lower():
+            return 'Операция успешно отменена'
+        try:
+            db_session.query(Interest).filter(Interest.name == new_name).one()
+            user.step = self.from_step
+            return 'Уже существует объект с данным названием. Попробуйте снова или напишите \'отмена\''
+        except NoResultFound:
+            db_session.add_model(Interest(name=new_name))
+            return 'Новый интерес успешно добавлен'
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
+class RemoveInterestInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_INTEREST_NAME_FOR_REMOVE, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        new_name = message.text
+        if 'отмена' in new_name.lower():
+            return 'Операция успешно отменена'
+        try:
+            db_session.delete_model(db_session.query(Interest).filter(Interest.name == new_name).one())
+            return 'Интерес успешно удален'
+        except NoResultFound:
+            user.step = self.from_step
+            return 'Такого интереса нет. Попробуйте снова или напишите \'отмена\''
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
+class AddAchievementInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_ACHIEVEMENT_NAME_FOR_ADD, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        new_name = message.text
+        if 'отмена' in new_name.lower():
+            return 'Операция успешно отменена'
+        try:
+            db_session.query(Achievement).filter(Achievement.name == new_name).one()
+            user.step = self.from_step
+            return 'Уже существует объект с данным названием. Попробуйте снова или напишите \'отмена\''
+        except NoResultFound:
+            db_session.add_model(Achievement(name=new_name))
+            return 'Новое достижение успешно добавлено'
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
+class RemoveAchievementInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_ACHIEVEMENT_NAME_FOR_REMOVE, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        new_name = message.text
+        if 'отмена' in new_name.lower():
+            return 'Операция успешно отменена'
+        try:
+            db_session.delete_model(db_session.query(Achievement).filter(Achievement.name == new_name).one())
+            return 'Достижение успешно удалено'
+        except NoResultFound:
+            user.step = self.from_step
+            return 'Такого достижения нет. Попробуйте снова или напишите \'отмена\''
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
+class AddGroupInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_GROUP_NAME_FOR_ADD, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        new_name = message.text
+        if 'отмена' in new_name.lower():
+            return 'Операция успешно отменена'
+        try:
+            db_session.query(LocalGroup).filter(LocalGroup.name == new_name).one()
+            user.step = self.from_step
+            return 'Уже существует объект с данным названием. Попробуйте снова или напишите \'отмена\''
+        except NoResultFound:
+            db_session.add_model(LocalGroup(name=new_name))
+            return 'Новая группа успешно добавлено'
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
+class RemoveGroupInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_GROUP_NAME_FOR_REMOVE, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        new_name = message.text
+        if 'отмена' in new_name.lower():
+            return 'Операция успешно отменена'
+        try:
+            db_session.delete_model(db_session.query(LocalGroup).filter(LocalGroup.name == new_name).one())
+            return 'Группа успешно удалена'
+        except NoResultFound:
+            user.step = self.from_step
+            return 'Такой группы нет. Попробуйте снова или напишите \'отмена\''
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
+data_inputs = [FirstNameInput(),
+               MiddleNameInput(),
+               LastNameInput(),
+               PhoneInput(),
+               EmailInput(),
                AppointAsInput(Step.ENTER_NEW_MANAGER_ID, Step.NONE, Rank.MANAGER, 'менеджером'),
-               EventNameInput(Step.ENTER_NEW_EVENT_NAME, Step.NONE),
-               AppointAsInput(Step.ENTER_NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором')]
+               EventNameInput(),
+               AppointAsInput(Step.ENTER_NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
+               AddInterestInput(),
+               RemoveInterestInput(),
+               AddAchievementInput(),
+               RemoveAchievementInput(),
+               AddGroupInput(),
+               RemoveGroupInput()]
 
 
 def get_data_input(user, message):
