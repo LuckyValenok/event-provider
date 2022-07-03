@@ -1,11 +1,12 @@
 import datetime
 from abc import ABC, abstractmethod
 
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from data.keyboards import profile_inline_keyboard
 from database.base import DBSession
-from database.models import User
+from database.models import User, Interest, Achievement, LocalGroup
+from database.models.base import BaseModel
 from database.queries.users import get_events_by_user
 from enums.ranks import Rank
 from enums.steps import Step
@@ -66,6 +67,28 @@ class AddSomethingCommand(Command, ABC):
         return user.rank == self.rank and f'добавить {self.name}' in message.text.lower()
 
 
+class ManageSomethingCommand(Command, ABC):
+    name: str
+    model: BaseModel
+    keyboard: InlineKeyboardMarkup
+
+    def __init__(self, name, model):
+        self.name = name
+        self.model = model
+        self.keyboard = InlineKeyboardMarkup()
+        self.keyboard.row(InlineKeyboardButton('Добавить', callback_data='add_' + self.model.__tablename__))
+        self.keyboard.row(InlineKeyboardButton('Удалить', callback_data='remove_' + self.model.__tablename__))
+
+    async def execute(self, db_session: DBSession, user: User, message: Message):
+        entities = db_session.query(self.model).all()
+        await message.answer(
+            f'{", ".join([entity.name for entity in entities]) if len(entities) != 0 else self.name + " пока отсутствуют"}',
+            reply_markup=self.keyboard)
+
+    def can_execute(self, user: User, message: Message) -> bool:
+        return user.rank == Rank.ADMIN and f'{self.name.lower()}' in message.text.lower()
+
+
 class GetMyProfileCommand(Command, ABC):
     async def execute(self, db_session: DBSession, user: User, message: Message):
         text = f'🧚{user.first_name} {user.middle_name} {user.last_name}\n' \
@@ -77,7 +100,7 @@ class GetMyProfileCommand(Command, ABC):
         # TODO: ВЫВОД ДОСТИЖЕНИЙ
 
     def can_execute(self, user: User, message: Message) -> bool:
-        return True
+        return 'мой профиль' in message.text.lower()
 
 
 class UnknownCommand(Command, ABC):
@@ -91,6 +114,9 @@ class UnknownCommand(Command, ABC):
 # UnknownCommand нужно оставлять последней
 commands = [GetMyEventsCommand(),
             GetMyProfileCommand(),
+            ManageSomethingCommand('Интересы', Interest),
+            ManageSomethingCommand('Группы', LocalGroup),
+            ManageSomethingCommand('Достижения', Achievement),
             AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'менеджера'),
             AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'организатора'),
             AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'мероприятие'),

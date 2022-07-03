@@ -4,6 +4,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from callbacks import get_callback
 from data import config
 from commands import get_command
 from data.keyboards import keyboards_by_rank
@@ -58,6 +59,17 @@ async def send_other(message: types.Message):
     command = get_command(user, message)
     if command is not None:
         await command.execute(db_session, user, message)
+
+
+@dp.callback_query_handler()
+async def process_callback(query: types.CallbackQuery):
+    user = users.get_user_by_id(db_session, query.from_user.id)
+    callback = get_callback(user, query)
+    if callback is not None:
+        await callback.callback(db_session, user, query)
+    else:
+        await query.answer()
+
 
 
 if __name__ == '__main__':
