@@ -65,6 +65,19 @@ class AddSomethingCommand(Command, ABC):
         return user.rank == self.rank and f'добавить {self.name}' in message.text.lower()
 
 
+class GetMyProfileCommand(Command, ABC):
+    async def execute(self, db_session: DBSession, user: User, message: Message):
+        text = f'🧚{user.first_name} {user.middle_name} {user.last_name}\n' \
+               f'├ Номер телефона: {user.phone}\n' \
+               f'├ Почта: {user.email}\n' \
+               f'├ Ваши группы: {", ".join([group.name for group in user.groups]) if len(user.groups) != 0 else "отсутствуют"}\n' \
+               f'└ Ваши интересы {", ".join([interest.name for interest in user.interests]) if len(user.interests) != 0 else "отсутствуют"}'
+        await message.answer(text)
+
+    def can_execute(self, user: User, message: Message) -> bool:
+        return True
+
+
 class UnknownCommand(Command, ABC):
     async def execute(self, db_session: DBSession, user: User, message: Message):
         await message.answer('Неизвестная команда')
@@ -75,6 +88,7 @@ class UnknownCommand(Command, ABC):
 
 # UnknownCommand нужно оставлять последней
 commands = [GetMyEventsCommand(),
+            GetMyProfileCommand(),
             AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'менеджера'),
             AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'организатора'),
             AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'мероприятие'),
