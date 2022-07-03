@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from aiogram.types import Message
 
+from data.keyboards import profile_inline_keyboard
 from database.base import DBSession
 from database.models import User
 from database.queries.users import get_events_by_user
@@ -72,7 +73,8 @@ class GetMyProfileCommand(Command, ABC):
                f'├ Почта: {user.email}\n' \
                f'├ Ваши группы: {", ".join([group.name for group in user.groups]) if len(user.groups) != 0 else "отсутствуют"}\n' \
                f'└ Ваши интересы {", ".join([interest.name for interest in user.interests]) if len(user.interests) != 0 else "отсутствуют"}'
-        await message.answer(text)
+        await message.answer(text, reply_markup=profile_inline_keyboard)
+        # TODO: ВЫВОД ДОСТИЖЕНИЙ
 
     def can_execute(self, user: User, message: Message) -> bool:
         return True
