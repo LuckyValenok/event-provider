@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup
+from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
 from database.models.base import BaseModel
 from enums.ranks import Rank
 from enums.steps import Step
@@ -59,35 +59,37 @@ class ManageSomethingCallback(Callback, ABC):
 
 
 class AttachSomethingCallback(Callback, ABC):
-    name: str
-    model: BaseModel
-
-    def __init__(self, name, model):
+    def __init__(self, name, model, relation_model, relation_column, _lambda):
         self.name = name
         self.model = model
+        self.relation_model = relation_model
+        self.relation_column = relation_column
+        self._lambda = _lambda
 
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
         await query.answer()
 
         if query.data.endswith(self.model.__tablename__):
             # TODO: Должно обрабатывать не только интересы
-            entities = db_session.query(self.model).filter(Interest not in user.interests).all()
-            if len(entities) == 0:
-                await query.message.answer(f'{self.name} пока отсутствуют')
+            entities = db_session.execute(
+                f'SELECT * FROM {self.model.__tablename__} WHERE id NOT IN (SELECT {self.relation_column} FROM {self.relation_model.__tablename__} WHERE user_id={user.id})')
+            keyboard = InlineKeyboardMarkup()
+            has_result = False
+            for entity in entities:
+                has_result = True
+                keyboard.add(InlineKeyboardButton(entity['name'],
+                                                  callback_data='att_' + self.model.__tablename__ + "_" + str(
+                                                      entity['id'])))
+            if has_result:
+                await query.message.answer(f'Доступные {self.name.lower()}:', reply_markup=keyboard)
             else:
-                keyboard = InlineKeyboardMarkup()
-                for entity in entities:
-                    keyboard.add(InlineKeyboardButton(entity.name,
-                                                      callback_data='att_' + self.model.__tablename__ + "_" + str(
-                                                          entity.id)))
-                await query.message.answer(f'Доступные {self.name.lower()}:',
-                                           reply_markup=keyboard)
+                await query.message.answer(f'Пока отсутствуют или вы выбрали уже все доступные {self.name.lower()}')
         else:
             try:
                 eid = int(query.data.split('_')[-1])
                 entity = db_session.query(self.model).filter(self.model.id == eid).one()
                 # TODD: Должно обрабатывать не только интересы
-                user.interests.append(entity)
+                self._lambda(user, entity)
                 db_session.commit_session()
 
                 await query.message.answer(f'{entity.name} успешно добавлен в {self.name.lower()}')
@@ -101,7 +103,10 @@ class AttachSomethingCallback(Callback, ABC):
 
 
 callbacks = [ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
-             AttachSomethingCallback('Интересы', Interest),
+             AttachSomethingCallback('Интересы', Interest, UserInterests, 'interest_id',
+                                     lambda u, i: u.interests.append(i)),
+             AttachSomethingCallback('Группы', LocalGroup, UserGroups, 'group_id',
+                                     lambda u, g: u.groups.append(g)),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'add', Step.ENTER_INTEREST_NAME_FOR_ADD,
                                      'Напишите название нового интереса'),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'remove', Step.ENTER_INTEREST_NAME_FOR_REMOVE,

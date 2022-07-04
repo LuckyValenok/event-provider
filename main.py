@@ -5,8 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from callbacks import get_callback
-from data import config
 from commands import get_command
+from data import config
 from data.keyboards import keyboards_by_rank
 from database.base import DBSession
 from database.models.user import User
@@ -69,7 +69,6 @@ async def process_callback(query: types.CallbackQuery):
         await callback.callback(db_session, user, query)
     else:
         await query.answer()
-
 
 
 if __name__ == '__main__':
