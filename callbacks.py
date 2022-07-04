@@ -58,7 +58,7 @@ class ManageSomethingCallback(Callback, ABC):
             self.model.__tablename__) and query.data.startswith(self.action)
 
 
-class AttachSomethingCallback(Callback, ABC):
+class AttachSomethingToUserCallback(Callback, ABC):
     def __init__(self, name, model, relation_model, relation_column, _lambda):
         self.name = name
         self.model = model
@@ -103,10 +103,10 @@ class AttachSomethingCallback(Callback, ABC):
 
 
 callbacks = [ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
-             AttachSomethingCallback('Интересы', Interest, UserInterests, 'interest_id',
-                                     lambda u, i: u.interests.append(i)),
-             AttachSomethingCallback('Группы', LocalGroup, UserGroups, 'group_id',
-                                     lambda u, g: u.groups.append(g)),
+             AttachSomethingToUserCallback('Интересы', Interest, UserInterests, 'interest_id',
+                                           lambda u, i: u.interests.append(i)),
+             AttachSomethingToUserCallback('Группы', LocalGroup, UserGroups, 'group_id',
+                                           lambda u, g: u.groups.append(g)),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'add', Step.ENTER_INTEREST_NAME_FOR_ADD,
                                      'Напишите название нового интереса'),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'remove', Step.ENTER_INTEREST_NAME_FOR_REMOVE,
