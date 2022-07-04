@@ -80,7 +80,7 @@ class TakePartCallback(Callback, ABC):
 
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
-        return query.data == 'takepart'
+        return True
 
 
 
