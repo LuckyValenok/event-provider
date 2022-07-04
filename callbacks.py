@@ -59,7 +59,6 @@ class ManageSomethingCallback(Callback, ABC):
             self.model.__tablename__) and query.data.startswith(self.action)
 
 
-
 class TakePartCallback(Callback, ABC):
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
         await query.answer()
@@ -76,12 +75,13 @@ class TakePartCallback(Callback, ABC):
                 await query.message.answer('Поздравляем, Вы принимаете участие в мероприятии!')
         except NoResultFound:
             await query.message.answer('Такого мероприятия нет')
-        
+
         await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('tp_') and (user.rank is Rank.USER or user.rank is Rank.MODER)
-        
+
+
 class ManageUserAttachmentCallback(Callback, ABC):
     def __init__(self, name, name_remove_form, model, relation_model, relation_column, _lambda):
         self.name = name

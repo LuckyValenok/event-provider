@@ -140,7 +140,6 @@ class EventNameInput(DataInput, ABC):
         return True
 
 
-# Добавление/удаление интересов, групп и достижений требует переработки
 class ManageSomethingDataInput(DataInput, ABC):
     def __init__(self, from_step, to_step, name, model, model_column, _lambda):
         super().__init__(from_step, to_step)

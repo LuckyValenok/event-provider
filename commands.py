@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from sqlalchemy import and_
 
 from data.keyboards import profile_inline_keyboard
 from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup, Event
+from database.models import User, Interest, Achievement, LocalGroup
 from database.models.base import BaseModel
 from database.queries.events import get_events_by_user, get_events_not_participate_user
 from enums.ranks import Rank
