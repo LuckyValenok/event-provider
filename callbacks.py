@@ -70,7 +70,6 @@ class AttachSomethingToUserCallback(Callback, ABC):
         await query.answer()
 
         if query.data.endswith(self.model.__tablename__):
-            # TODO: Должно обрабатывать не только интересы
             entities = db_session.execute(
                 f'SELECT * FROM {self.model.__tablename__} WHERE id NOT IN (SELECT {self.relation_column} FROM {self.relation_model.__tablename__} WHERE user_id={user.id})')
             keyboard = InlineKeyboardMarkup()
@@ -88,7 +87,6 @@ class AttachSomethingToUserCallback(Callback, ABC):
             try:
                 eid = int(query.data.split('_')[-1])
                 entity = db_session.query(self.model).filter(self.model.id == eid).one()
-                # TODD: Должно обрабатывать не только интересы
                 self._lambda(user, entity)
                 db_session.commit_session()
 
