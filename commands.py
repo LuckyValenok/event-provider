@@ -2,10 +2,11 @@ import datetime
 from abc import ABC, abstractmethod
 
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from sqlalchemy import and_
 
 from data.keyboards import profile_inline_keyboard
 from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup
+from database.models import User, Interest, Achievement, LocalGroup, Event
 from database.models.base import BaseModel
 from database.queries.events import get_events_by_user, get_events_not_participate_user
 from enums.ranks import Rank
@@ -82,15 +83,16 @@ class AddSomethingCommand(Command, ABC):
     step: Step
     name: str
 
-    def __init__(self, rank, step, name):
+    def __init__(self, rank, step, name, _type):
         self.rank = rank
         self.step = step
         self.name = name
+        self._type = _type
 
     async def execute(self, db_session: DBSession, user: User, message: Message):
         user.step = self.step
         db_session.commit_session()
-        await message.answer(f'Ввведите ID нового {self.name}')
+        await message.answer(f'Ввведите {self._type} нового {self.name}')
 
     def can_execute(self, user: User, message: Message) -> bool:
         return user.rank == self.rank and f'добавить {self.name}' in message.text.lower()
@@ -147,9 +149,9 @@ commands = [GetMyEventsCommand(),
             ManageSomethingCommand('Интересы', Interest),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),
-            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'менеджера'),
-            AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'организатора'),
-            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'мероприятие'),
+            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'ID', 'менеджера'),
+            AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'ID', 'организатора'),
+            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'название', 'мероприятие'),
             UnknownCommand()]
 
 

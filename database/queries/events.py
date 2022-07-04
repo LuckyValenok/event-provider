@@ -7,4 +7,4 @@ def get_events_by_user(session: DBSession, uid: int):
 
 
 def get_events_not_participate_user(session: DBSession, uid: int):
-    return session.query(Event).filter(Event.users.any(User.id != uid)).all()
+    return session.query(Event).filter(~Event.users.any(User.id == uid)).all()
