@@ -1,4 +1,4 @@
-aiogram
-sqlalchemy
-alembic
-qrcode
+aiogram>=2.21
+sqlalchemy>=1.4.39
+alembic>=1.8.0
+qrcode>=7.3.1
