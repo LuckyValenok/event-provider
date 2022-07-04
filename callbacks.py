@@ -70,19 +70,19 @@ class AttachSomethingToUserCallback(Callback, ABC):
         await query.answer()
 
         if query.data.endswith(self.model.__tablename__):
-            entities = db_session.execute(
-                f'SELECT * FROM {self.model.__tablename__} WHERE id NOT IN (SELECT {self.relation_column} FROM {self.relation_model.__tablename__} WHERE user_id={user.id})')
-            keyboard = InlineKeyboardMarkup()
-            has_result = False
-            for entity in entities:
-                has_result = True
-                keyboard.add(InlineKeyboardButton(entity['name'],
-                                                  callback_data='att_' + self.model.__tablename__ + "_" + str(
-                                                      entity['id'])))
-            if has_result:
-                await query.message.answer(f'Доступные {self.name.lower()}:', reply_markup=keyboard)
-            else:
+            entities = db_session.query(self.model).filter(
+                self.model.id.not_in(
+                    db_session.query(self.relation_model).with_entities(self.relation_column).filter(
+                        self.relation_model.user_id == user.id))).all()
+            if len(entities) == 0:
                 await query.message.answer(f'Пока отсутствуют или вы выбрали уже все доступные {self.name.lower()}')
+            else:
+                keyboard = InlineKeyboardMarkup()
+                for entity in entities:
+                    keyboard.add(InlineKeyboardButton(entity.name,
+                                                      callback_data='att_' + self.model.__tablename__ + "_" + str(
+                                                          entity.id)))
+                await query.message.answer(f'Доступные {self.name.lower()}:', reply_markup=keyboard)
         else:
             try:
                 eid = int(query.data.split('_')[-1])
@@ -101,9 +101,9 @@ class AttachSomethingToUserCallback(Callback, ABC):
 
 
 callbacks = [ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
-             AttachSomethingToUserCallback('Интересы', Interest, UserInterests, 'interest_id',
+             AttachSomethingToUserCallback('Интересы', Interest, UserInterests, UserInterests.interest_id,
                                            lambda u, i: u.interests.append(i)),
-             AttachSomethingToUserCallback('Группы', LocalGroup, UserGroups, 'group_id',
+             AttachSomethingToUserCallback('Группы', LocalGroup, UserGroups, UserGroups.group_id,
                                            lambda u, g: u.groups.append(g)),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'add', Step.ENTER_INTEREST_NAME_FOR_ADD,
                                      'Напишите название нового интереса'),
