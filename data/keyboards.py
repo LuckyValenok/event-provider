@@ -14,5 +14,7 @@ keyboards_by_rank = {
 
 profile_inline_keyboard = InlineKeyboardMarkup()
 profile_inline_keyboard.row(InlineKeyboardButton('Изменить анкету', callback_data='change_user'))
-profile_inline_keyboard.row(InlineKeyboardButton('Добавить группу', callback_data='att_local_group'))
-profile_inline_keyboard.row(InlineKeyboardButton('Добавить интерес', callback_data='att_interest'))
+profile_inline_keyboard.row(InlineKeyboardButton('Добавить группу', callback_data='att_local_group'),
+                            InlineKeyboardButton('Удалить группу', callback_data='deatt_local_group'))
+profile_inline_keyboard.row(InlineKeyboardButton('Добавить интерес', callback_data='att_interest'),
+                            InlineKeyboardButton('Удалить интерес', callback_data='deatt_interest'))

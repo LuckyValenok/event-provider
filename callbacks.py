@@ -58,9 +58,10 @@ class ManageSomethingCallback(Callback, ABC):
             self.model.__tablename__) and query.data.startswith(self.action)
 
 
-class AttachSomethingToUserCallback(Callback, ABC):
-    def __init__(self, name, model, relation_model, relation_column, _lambda):
+class ManageUserAttachmentCallback(Callback, ABC):
+    def __init__(self, name, name_remove_form, model, relation_model, relation_column, _lambda):
         self.name = name
+        self.name_remove_form = name_remove_form
         self.model = model
         self.relation_model = relation_model
         self.relation_column = relation_column
@@ -69,42 +70,45 @@ class AttachSomethingToUserCallback(Callback, ABC):
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
         await query.answer()
 
+        de_attach = query.data.startswith('de')
+
         if query.data.endswith(self.model.__tablename__):
             entities = db_session.query(self.model).filter(
-                self.model.id.not_in(
-                    db_session.query(self.relation_model).with_entities(self.relation_column).filter(
-                        self.relation_model.user_id == user.id))).all()
+                self.model.id.not_in(db_session.query(self.relation_model).with_entities(self.relation_column).filter(
+                    self.relation_model.user_id == user.id))).all() if not de_attach else db_session.query(
+                self.model).filter(self.relation_model.user_id == user.id).all()
             if len(entities) == 0:
-                await query.message.answer(f'Пока отсутствуют или вы выбрали уже все доступные {self.name.lower()}')
+                await query.message.answer('Тут пусто')
             else:
                 keyboard = InlineKeyboardMarkup()
                 for entity in entities:
                     keyboard.add(InlineKeyboardButton(entity.name,
-                                                      callback_data='att_' + self.model.__tablename__ + "_" + str(
-                                                          entity.id)))
+                                                      callback_data=query.data + '_' + str(entity.id)))
                 await query.message.answer(f'Доступные {self.name.lower()}:', reply_markup=keyboard)
         else:
             try:
                 eid = int(query.data.split('_')[-1])
                 entity = db_session.query(self.model).filter(self.model.id == eid).one()
-                self._lambda(user, entity)
+                self._lambda(user, entity, not de_attach)
                 db_session.commit_session()
 
-                await query.message.answer(f'{entity.name} успешно добавлен в {self.name.lower()}')
+                await query.message.answer(
+                    f'{entity.name} успешно {"добавлен в " + self.name.lower() if not de_attach else "удален из " + self.name_remove_form.lower()}')
             except ValueError / NoResultFound:
                 await query.message.answer(f'{self.name} с этим названием отсутствуют')
 
         await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
-        return query.data.startswith('att_' + self.model.__tablename__)
+        return query.data.startswith('att_' + self.model.__tablename__) or query.data.startswith(
+            'deatt_' + self.model.__tablename__)
 
 
 callbacks = [ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
-             AttachSomethingToUserCallback('Интересы', Interest, UserInterests, UserInterests.interest_id,
-                                           lambda u, i: u.interests.append(i)),
-             AttachSomethingToUserCallback('Группы', LocalGroup, UserGroups, UserGroups.group_id,
-                                           lambda u, g: u.groups.append(g)),
+             ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
+                                          lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
+             ManageUserAttachmentCallback('Группы', 'Групп', LocalGroup, UserGroups, UserGroups.group_id,
+                                          lambda u, g, a: u.groups.append(g) if a else u.groups.remove(g)),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'add', Step.ENTER_INTEREST_NAME_FOR_ADD,
                                      'Напишите название нового интереса'),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'remove', Step.ENTER_INTEREST_NAME_FOR_REMOVE,
