@@ -14,6 +14,9 @@ class DBSession(object):
     def __init__(self, session: Session, *args, **kwargs):
         self._session = session
 
+    def execute(self, statement, params=None):
+        return self._session.execute(statement, params)
+
     def query(self, *entities, **kwargs):
         return self._session.query(*entities, **kwargs)
 
