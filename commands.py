@@ -10,6 +10,7 @@ from database.models.base import BaseModel
 from database.queries.events import get_events_by_user, get_events_not_participate_user
 from enums.ranks import Rank
 from enums.steps import Step
+from aiogram import types
 
 
 class Command(ABC):
@@ -35,6 +36,8 @@ class GetMyEventsCommand(Command, ABC):
                 str_event = f'⭐️Название: {event.name}\n'
                 if user.rank is not Rank.USER:
                     str_event += f'├    ID: {event.id}\n'
+                btnEditing = InlineKeyboardButton('Записаться на мероприятие', callback_data=f'takepart_{event.id}')
+                keyboard = types.InlineKeyboardMarkup().add(btnEditing)
                 str_event += f'├    Описание: {event.description if event.description is not None else "отсутствует"}\n' \
                              f'├    Дата: {event.date if event.date is not None else "не назначена"}\n' \
                              f'└    Координаты места проведения: '
@@ -43,7 +46,7 @@ class GetMyEventsCommand(Command, ABC):
                 else:
                     str_event += 'не назначены'
                 # TODO: взимодействие с этими мероприятиями
-                await message.answer(str_event)
+                await message.reply(str_event, reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
