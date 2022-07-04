@@ -1,4 +1,3 @@
-import datetime
 from abc import ABC, abstractmethod
 
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
@@ -10,7 +9,6 @@ from database.models.base import BaseModel
 from database.queries.events import get_events_by_user, get_events_not_participate_user
 from enums.ranks import Rank
 from enums.steps import Step
-from aiogram import types
 
 
 class Command(ABC):
@@ -29,15 +27,10 @@ class GetMyEventsCommand(Command, ABC):
         if len(events) == 0:
             await message.answer('В данный момент у вас нет мероприятий')
         else:
-            current_timestamp = datetime.datetime.now().timestamp()
             for event in events:
-                if event.date is not None and current_timestamp > event.date:
-                    continue
                 str_event = f'⭐️Название: {event.name}\n'
                 if user.rank is not Rank.USER:
                     str_event += f'├    ID: {event.id}\n'
-                btnEditing = InlineKeyboardButton('Записаться на мероприятие', callback_data=f'takepart_{event.id}')
-                keyboard = types.InlineKeyboardMarkup().add(btnEditing)
                 str_event += f'├    Описание: {event.description if event.description is not None else "отсутствует"}\n' \
                              f'├    Дата: {event.date if event.date is not None else "не назначена"}\n' \
                              f'└    Координаты места проведения: '
@@ -46,7 +39,7 @@ class GetMyEventsCommand(Command, ABC):
                 else:
                     str_event += 'не назначены'
                 # TODO: взимодействие с этими мероприятиями
-                await message.reply(str_event, reply_markup=keyboard)
+                await message.answer(str_event)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
@@ -60,20 +53,18 @@ class GetAllEventsCommand(Command, ABC):
         if len(events) == 0:
             await message.answer('В данный момент нет активных мероприятий')
         else:
-            current_timestamp = datetime.datetime.now().timestamp()
             for event in events:
-                if event.date is not None and current_timestamp > event.date:
-                    continue
-                str_event = f'⭐️Название: {event.name}\n'
-                str_event += f'├    Описание: {event.description if event.description is not None else "отсутствует"}\n' \
-                             f'├    Дата: {event.date if event.date is not None else "не назначена"}\n' \
-                             f'└    Координаты места проведения: '
+                str_event = f'⭐️Название: {event.name}\n' \
+                            f'├    Описание: {event.description if event.description is not None else "отсутствует"}\n' \
+                            f'├    Дата: {event.date if event.date is not None else "не назначена"}\n' \
+                            f'└    Координаты места проведения: '
                 if event.lat is not None and event.lng is not None:
                     str_event += f'{event.lat} {event.lng}'
                 else:
                     str_event += 'не назначены'
-                # TODO: взимодействие с этими мероприятиями
-                await message.answer(str_event)
+                keyboard = InlineKeyboardMarkup().add(
+                    InlineKeyboardButton('Записаться на мероприятие', callback_data=f'tp_{event.id}'))
+                await message.answer(str_event, reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
