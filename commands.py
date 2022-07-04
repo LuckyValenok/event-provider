@@ -39,7 +39,11 @@ class GetMyEventsCommand(Command, ABC):
                 else:
                     str_event += 'не назначены'
                 # TODO: взимодействие с этими мероприятиями
-                await message.answer(str_event)
+                if user.rank is Rank.ORGANIZER:
+                    keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{event.id}"))
+                    await message.answer(str_event, reply_markup=keyboard)
+                else:
+                    await message.answer(str_event)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or

@@ -4,11 +4,12 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
+from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventUsers
 from database.models.base import BaseModel
 from database.queries.events import get_events_by_id
 from enums.ranks import Rank
 from enums.steps import Step
+from database.queries import events
 
 
 class Callback(ABC):
@@ -128,6 +129,25 @@ class ManageUserAttachmentCallback(Callback, ABC):
             'deatt_' + self.model.__tablename__)
 
 
+class GetAttendentStatisticsCallback(Callback, ABC):
+
+    def __init__(self, rank, model, action, step, message):
+        self.rank = rank
+        self.model = model
+        self.action = action
+        self.step = step
+        self.message = message
+
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        ev_id = query.data.split('_')[1]
+        await query.answer()
+        await query.message.answer(f"В мероприятии участвовал(-и) {events.get_count_visited(ev_id, db_session)} человек(-а).")
+        await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('atst_')
+
+
 callbacks = [TakePartCallback(),
              ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
@@ -146,6 +166,7 @@ callbacks = [TakePartCallback(),
                                      'Напишите название новой группы'),
              ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.ENTER_GROUP_NAME_FOR_REMOVE,
                                      'Напишите название группы для удаления'),
+             GetAttendentStatisticsCallback(Rank.ORGANIZER, EventUsers, None, None, None),
              UnknownCallback()]
 
 
