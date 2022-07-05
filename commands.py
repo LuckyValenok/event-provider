@@ -40,8 +40,14 @@ class GetMyEventsCommand(Command, ABC):
                 else:
                     str_event += 'не назначены'
                 # TODO: взимодействие с этими мероприятиями
+                if user.rank is Rank.USER and event.status == StatusEvent.FINISHED:
+                    keyboard = InlineKeyboardMarkup().add(
+                        InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{event.id}"))
+                    await message.answer(str_event, reply_markup=keyboard)
+
                 if user.rank is Rank.ORGANIZER and event.status == StatusEvent.FINISHED:
-                    keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{event.id}"))
+                    keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{event.id}"),
+                                                          InlineKeyboardButton('Просмотреть отзывы', callback_data=f"fbst_{event.id}"))
                     await message.answer(str_event, reply_markup=keyboard)
                 else:
                     await message.answer(str_event)

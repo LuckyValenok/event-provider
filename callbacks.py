@@ -3,13 +3,16 @@ from abc import ABC, abstractmethod
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.exc import NoResultFound
 
+
 from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
+from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, Event_FeedBack
 from database.models.base import BaseModel
 from database.queries import events
 from database.queries.events import get_event_by_id
 from enums.ranks import Rank
 from enums.steps import Step
+
+
 
 
 class Callback(ABC):
@@ -141,6 +144,36 @@ class GetAttendentStatisticsCallback(Callback, ABC):
         return query.data.startswith('atst_')
 
 
+class UserFeedbackCallback(Callback, ABC):
+
+    def __init__(self, step, message):
+        self.step = step
+        self.message = message
+
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        ev_id = int(query.data.split('_')[-1])
+        await query.answer()
+        db_session.add_model(model=Event_FeedBack(event_id=ev_id, user_id=user.id))
+        user.step = Step.ENTER_FEEDBACK_TEXT
+        db_session.commit_session()
+
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('feb_')
+
+
+class FeedbackStatisticsCallback(Callback, ABC):
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        ev_id = int(query.data.split('_')[-1])
+        await query.answer()
+        await query.message.answer()
+        await query.message.delete()
+        # TODO: Тут вывод отзывов
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('fbst_')
+
+
 callbacks = [TakePartCallback(),
              ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
@@ -160,6 +193,8 @@ callbacks = [TakePartCallback(),
              ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.ENTER_GROUP_NAME_FOR_REMOVE,
                                      'Напишите название группы для удаления'),
              GetAttendentStatisticsCallback(),
+             FeedbackStatisticsCallback(),
+             UserFeedbackCallback(Step.ENTER_FEEDBACK_TEXT, 'Оставьте свой отзыв :)'),
              UnknownCallback()]
 
 

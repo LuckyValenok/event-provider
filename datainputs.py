@@ -4,8 +4,9 @@ from aiogram.types import Message
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
-from database.models import User, Event, Interest, Achievement, LocalGroup
+from database.models import User, Event, Interest, Achievement, LocalGroup, FeedBack, Event_FeedBack
 from database.queries.users import get_user_by_id
+from database.queries.events import get_editing_event
 from enums.ranks import Rank
 from enums.steps import Step
 
@@ -173,6 +174,21 @@ class ManageSomethingDataInput(DataInput, ABC):
         return True
 
 
+class EventNameInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_FEEDBACK_TEXT, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        ev_id = get_editing_event(db_session, user.id).event_id
+        fb_text_msg = message.text
+        db_session.add_model(FeedBack(event_id=ev_id, fb_text=fb_text_msg))
+        db_session.query(Event_FeedBack).delete()
+        return 'Отзыв отправлен!'
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
 data_inputs = [FirstNameInput(),
                MiddleNameInput(),
                LastNameInput(),
@@ -192,7 +208,8 @@ data_inputs = [FirstNameInput(),
                ManageSomethingDataInput(Step.ENTER_GROUP_NAME_FOR_ADD, Step.NONE, 'Группа', LocalGroup, LocalGroup.name,
                                         lambda n: LocalGroup(name=n)),
                ManageSomethingDataInput(Step.ENTER_GROUP_NAME_FOR_REMOVE, Step.NONE, 'Группа', LocalGroup,
-                                        LocalGroup.name, None)]
+                                        LocalGroup.name, None),
+               EventNameInput()]
 
 
 def get_data_input(user, message):
