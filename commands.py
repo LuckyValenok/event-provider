@@ -8,6 +8,7 @@ from database.models import User, Interest, Achievement, LocalGroup
 from database.models.base import BaseModel
 from database.queries.events import get_events_by_user, get_events_not_participate_user
 from enums.ranks import Rank
+from enums.status_event import StatusEvent
 from enums.steps import Step
 
 
@@ -39,7 +40,7 @@ class GetMyEventsCommand(Command, ABC):
                 else:
                     str_event += 'не назначены'
                 # TODO: взимодействие с этими мероприятиями
-                if user.rank is Rank.ORGANIZER:
+                if user.rank is Rank.ORGANIZER and event.status == StatusEvent.FINISHED:
                     keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{event.id}"))
                     await message.answer(str_event, reply_markup=keyboard)
                 else:

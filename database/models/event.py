@@ -2,6 +2,7 @@ from sqlalchemy import Column, VARCHAR, ForeignKey, Integer, TIMESTAMP, Float, E
 from sqlalchemy.orm import relation
 
 from enums.status_attendion import StatusAttendion
+from enums.status_event import StatusEvent
 from . import User, Interest, LocalGroup
 from .base import BaseModel
 
@@ -36,6 +37,7 @@ class Event(BaseModel):
     date = Column(TIMESTAMP, nullable=True)
     lat = Column(Float, nullable=True)
     lng = Column(Float, nullable=True)
+    status = Column(Enum(StatusEvent), nullable=False, default=StatusEvent.UNFINISHED)
 
     users = relation(
         User,
