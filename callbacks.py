@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventUsers
+from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
 from database.models.base import BaseModel
 from database.queries import events
 from database.queries.events import get_event_by_id
@@ -130,14 +130,6 @@ class ManageUserAttachmentCallback(Callback, ABC):
 
 
 class GetAttendentStatisticsCallback(Callback, ABC):
-
-    def __init__(self, rank, model, action, step, message):
-        self.rank = rank
-        self.model = model
-        self.action = action
-        self.step = step
-        self.message = message
-
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
         ev_id = int(query.data.split('_')[-1])
         await query.answer()
@@ -167,7 +159,7 @@ callbacks = [TakePartCallback(),
                                      'Напишите название новой группы'),
              ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.ENTER_GROUP_NAME_FOR_REMOVE,
                                      'Напишите название группы для удаления'),
-             GetAttendentStatisticsCallback(Rank.ORGANIZER, EventUsers, None, None, None),
+             GetAttendentStatisticsCallback(),
              UnknownCallback()]
 
 
