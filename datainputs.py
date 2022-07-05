@@ -35,7 +35,7 @@ class DataInput(ABC):
 
 class FirstNameInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.ENTER_FIRST_NAME, Step.NONE)
+        super().__init__(Step.ENTER_FIRST_NAME, Step.ENTER_MIDDLE_NAME)
 
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.first_name = message.text
@@ -47,7 +47,7 @@ class FirstNameInput(DataInput, ABC):
 
 class MiddleNameInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.ENTER_MIDDLE_NAME, Step.NONE)
+        super().__init__(Step.ENTER_MIDDLE_NAME, Step.ENTER_LAST_NAME)
 
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.middle_name = message.text
@@ -59,7 +59,7 @@ class MiddleNameInput(DataInput, ABC):
 
 class LastNameInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.ENTER_LAST_NAME, Step.NONE)
+        super().__init__(Step.ENTER_LAST_NAME, Step.ENTER_PHONE)
 
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.last_name = message.text
@@ -72,7 +72,7 @@ class LastNameInput(DataInput, ABC):
 
 class PhoneInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.ENTER_PHONE, Step.NONE)
+        super().__init__(Step.ENTER_PHONE, Step.ENTER_EMAIL)
 
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
         user.phone = message.text

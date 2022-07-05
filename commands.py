@@ -146,9 +146,9 @@ commands = [GetMyEventsCommand(),
             ManageSomethingCommand('Интересы', Interest),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),
-            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'ID', 'менеджера'),
-            AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'ID', 'организатора'),
-            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'название', 'мероприятие'),
+            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'менеджера', 'ID'),
+            AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'организатора', 'ID'),
+            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'мероприятие', 'название'),
             UnknownCommand()]
 
 

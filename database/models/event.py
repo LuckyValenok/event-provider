@@ -1,6 +1,7 @@
-from sqlalchemy import Column, VARCHAR, ForeignKey, Integer, TIMESTAMP, Float
+from sqlalchemy import Column, VARCHAR, ForeignKey, Integer, TIMESTAMP, Float, Enum
 from sqlalchemy.orm import relation
 
+from enums.status_attendion import StatusAttendion
 from . import User, Interest, LocalGroup
 from .base import BaseModel
 
@@ -24,6 +25,7 @@ class EventUsers(BaseModel):
 
     event_id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    status_attendion = Column(Enum(StatusAttendion), nullable=False, default=StatusAttendion.NOT_ARRIVED, index=True)
 
 
 class Event(BaseModel):
