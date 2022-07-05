@@ -6,7 +6,8 @@ from sqlalchemy.exc import NoResultFound
 from database.base import DBSession
 from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
 from database.models.base import BaseModel
-from database.queries.events import get_events_by_id
+from database.queries import events
+from database.queries.events import get_event_by_id
 from enums.ranks import Rank
 from enums.steps import Step
 
@@ -65,7 +66,7 @@ class TakePartCallback(Callback, ABC):
 
         eid = int(query.data.split('_')[-1])
         try:
-            event = get_events_by_id(db_session, eid)
+            event = get_event_by_id(db_session, eid)
             if user in event.users:
                 await query.message.answer("Вы уже принимаете участие в мероприятии.")
             else:
@@ -128,6 +129,18 @@ class ManageUserAttachmentCallback(Callback, ABC):
             'deatt_' + self.model.__tablename__)
 
 
+class GetAttendentStatisticsCallback(Callback, ABC):
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        ev_id = int(query.data.split('_')[-1])
+        await query.answer()
+        await query.message.answer(
+            f"В мероприятии участвовал(-и) {events.get_count_visited(db_session, ev_id)} человек(-а).")
+        await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('atst_')
+
+
 callbacks = [TakePartCallback(),
              ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
@@ -146,6 +159,7 @@ callbacks = [TakePartCallback(),
                                      'Напишите название новой группы'),
              ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.ENTER_GROUP_NAME_FOR_REMOVE,
                                      'Напишите название группы для удаления'),
+             GetAttendentStatisticsCallback(),
              UnknownCallback()]
 
 

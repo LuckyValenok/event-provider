@@ -8,6 +8,7 @@ from database.models import User, Interest, Achievement, LocalGroup
 from database.models.base import BaseModel
 from database.queries.events import get_events_by_user, get_events_not_participate_user
 from enums.ranks import Rank
+from enums.status_event import StatusEvent
 from enums.steps import Step
 
 
@@ -39,7 +40,11 @@ class GetMyEventsCommand(Command, ABC):
                 else:
                     str_event += 'не назначены'
                 # TODO: взимодействие с этими мероприятиями
-                await message.answer(str_event)
+                if user.rank is Rank.ORGANIZER and event.status == StatusEvent.FINISHED:
+                    keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{event.id}"))
+                    await message.answer(str_event, reply_markup=keyboard)
+                else:
+                    await message.answer(str_event)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
@@ -142,9 +147,9 @@ commands = [GetMyEventsCommand(),
             ManageSomethingCommand('Интересы', Interest),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),
-            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'ID', 'менеджера'),
-            AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'ID', 'организатора'),
-            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'название', 'мероприятие'),
+            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_MANAGER_ID, 'менеджера', 'ID'),
+            AddSomethingCommand(Rank.MANAGER, Step.ENTER_NEW_ORGANIZER_ID, 'организатора', 'ID'),
+            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'мероприятие', 'название'),
             UnknownCommand()]
 
 
