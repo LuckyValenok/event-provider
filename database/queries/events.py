@@ -29,8 +29,8 @@ def get_count_visited(session: DBSession, eid: int) -> int:
              User.rank == Rank.USER)).all())
 
 
-def get_editing_event(session: DBSession, eid: int) -> EventEditors:
-    return session.query(EventEditors).filter(EventEditors.user_id == eid).one()
+def get_editor_event(session: DBSession, uid: int) -> EventEditors:
+    return session.query(EventEditors).filter(EventEditors.user_id == uid).one()
 
 
 def get_new_code(session: DBSession) -> str:

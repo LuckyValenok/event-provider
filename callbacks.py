@@ -3,6 +3,8 @@ from io import BytesIO
 
 import qrcode
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from dostoevsky.models import FastTextSocialNetworkModel
+from dostoevsky.tokenization import RegexTokenizer
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
@@ -178,9 +180,44 @@ class UserFeedbackCallback(Callback, ABC):
 class FeedbackStatisticsCallback(Callback, ABC):
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
         await query.answer()
+
+        tokenizer = RegexTokenizer()
+        model = FastTextSocialNetworkModel(tokenizer=tokenizer)
+
+        messages = []
+
         eid = int(query.data.split('_')[-1])
         for feedback in get_feedbacks(db_session, eid):
-            await query.message.answer(feedback.fb_text)
+            messages.append(str(feedback.fb_text))
+
+        results = model.predict(messages, k=2)
+        neutral_list = []
+        negative_list = []
+        positive_list = []
+        for sentiment in results:
+            neutral = sentiment.get('neutral')
+            negative = sentiment.get('negative')
+            positive = sentiment.get('positive')
+            if neutral is not None:
+                neutral_list.append(sentiment.get('neutral'))
+            if negative is not None:
+                negative_list.append(sentiment.get('negative'))
+            if positive is not None:
+                positive_list.append(sentiment.get('positive'))
+
+        if len(messages) != 0:
+            neutral = sum(neutral_list)
+            negative = sum(negative_list)
+            positive = sum(positive_list)
+            _max = neutral + negative + positive
+            feedbacks = f'Сентимент-анализ:\n' \
+                        f'Доля нейтральных отзывов: {neutral / _max:.1%}\n' \
+                        f'Доля отрицательных отзывов: {negative / _max:.1%}\n' \
+                        f'Доля положительных отзывов: {positive / _max:.1%}\n\n'
+            feedbacks += '\n'.join(messages)
+        else:
+            feedbacks = 'отсутствуют'
+        await query.message.answer(f'Отзывы:\n\n{feedbacks}')
         await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:

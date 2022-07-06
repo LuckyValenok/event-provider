@@ -11,7 +11,7 @@ from data.keyboards import keyboards_by_rank
 from database.base import DBSession
 from database.models import User, Event, Interest, Achievement, LocalGroup, EventFeedbacks
 from database.models.event import EventCodes, EventUsers
-from database.queries.events import get_editing_event
+from database.queries.events import get_editor_event
 from database.queries.users import get_user_by_id
 from enums.ranks import Rank
 from enums.status_attendion import StatusAttendion
@@ -129,7 +129,7 @@ class FeedbackToEventInput(DataInput, ABC):
         super().__init__(Step.FEEDBACK_TEXT, Step.NONE)
 
     async def abstract_input(self, db_session: DBSession, user: User, message: Message):
-        editor = get_editing_event(db_session, user.id)
+        editor = get_editor_event(db_session, user.id)
         eid = editor.event_id
         db_session.add_model(EventFeedbacks(event_id=eid, fb_text=message.text))
         db_session.delete_model(editor)
@@ -168,6 +168,7 @@ class MarkPresentInput(DataInput, ABC):
             event_users.status_attendion = StatusAttendion.ARRIVED
 
             db_session.delete_model(event_codes)
+            db_session.delete_model(get_editor_event(db_session, user.id))
 
             return 'Пользователь успешно отмечен'
         except NoResultFound as e:
