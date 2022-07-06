@@ -9,12 +9,19 @@ keyboards_by_rank = {
     Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2).add('Добавить мероприятие',
                                                                                'Мои мероприятия', 'Статистика',
                                                                                'Настройки'),
-    Rank.ADMIN: ReplyKeyboardMarkup(resize_keyboard=True).add('Интересы', 'Группы', 'Достижения', 'Добавить организатора',
-                                                              'Статистика')
+    Rank.ADMIN: ReplyKeyboardMarkup(resize_keyboard=True).add('Интересы', 'Группы', 'Достижения',
+                                                              'Добавить организатора', 'Статистика')
 }
 
 keyboards_by_status_event_and_by_rank = {
     StatusEvent.UNFINISHED: {
+        Rank.ORGANIZER: lambda e: InlineKeyboardMarkup().add(
+            InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}")),
+        Rank.USER: lambda e: InlineKeyboardMarkup().add(
+            InlineKeyboardButton('Отменить заявку на участие', callback_data=f"ecan_{e.id}")),
+        Rank.MODER: lambda e: InlineKeyboardMarkup().row(
+            InlineKeyboardButton('Отменить заявку на участие', callback_data=f"ecan_{e.id}")).row(
+            InlineKeyboardButton('Отметить присутствующих', callback_data=f"marpr_{e.id}")),
     },
     StatusEvent.FINISHED: {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup().add(

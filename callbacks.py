@@ -9,6 +9,7 @@ from database.models.base import BaseModel
 from database.queries import events
 from database.queries.events import get_event_by_id
 from enums.ranks import Rank
+from enums.status_event import StatusEvent
 from enums.steps import Step
 
 
@@ -167,8 +168,32 @@ class FeedbackStatisticsCallback(Callback, ABC):
         return query.data.startswith('fbst_') and user.rank is Rank.ORGANIZER
 
 
+class CancelEventCallback(Callback, ABC):
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        await query.answer()
+
+        eid = int(query.data.split('_')[-1])
+        try:
+            event = get_event_by_id(db_session, eid)
+            if user in event.users and event.status == StatusEvent.UNFINISHED:
+                event.users.remove(user)
+                db_session.commit_session()
+
+                await query.message.answer('Вы отменили заявку на участие в мероприятии')
+            else:
+                await query.message.answer("Вы уже не принимаете участие в этом мероприятии или оно завершилось")
+        except NoResultFound:
+            await query.message.answer('Такого мероприятия нет')
+
+        await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('ecan_') and (user.rank is Rank.USER or user.rank is Rank.MODER)
+
+
 callbacks = [TakePartCallback(),
              UserFeedbackCallback(),
+             CancelEventCallback(),
              ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
                                           lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
