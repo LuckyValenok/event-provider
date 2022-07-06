@@ -10,7 +10,7 @@ from data import config
 from data.keyboards import keyboards_by_rank
 from database.base import DBSession
 from database.models.user import User
-from database.queries import users, events
+from database.queries import users
 from datainputs import get_data_input
 from enums.ranks import Rank
 from enums.steps import Step

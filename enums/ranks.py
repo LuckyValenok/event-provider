@@ -6,5 +6,4 @@ class Rank(Enum):
     USER = 1
     MODER = 2
     ORGANIZER = 3
-    MANAGER = 4
-    ADMIN = 5
+    ADMIN = 4

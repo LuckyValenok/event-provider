@@ -1,7 +1,7 @@
 from sqlalchemy import and_
 
 from database.base import DBSession
-from database.models import Event, User, EventUsers, Event_FeedBack
+from database.models import Event, User, EventUsers, EventEditors
 from enums.ranks import Rank
 from enums.status_attendion import StatusAttendion
 
@@ -25,5 +25,5 @@ def get_count_visited(session: DBSession, eid: int) -> int:
              User.rank == Rank.USER)).all())
 
 
-def get_editing_event(session: DBSession, eid: int) -> int:
-    return session.query(Event_FeedBack).filter(Event_FeedBack.user_id == eid).one()
+def get_editing_event(session: DBSession, eid: int) -> EventEditors:
+    return session.query(EventEditors).filter(EventEditors.user_id == eid).one()
