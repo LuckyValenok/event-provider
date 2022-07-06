@@ -1,13 +1,20 @@
+import os
 from abc import ABC, abstractmethod
 
-from aiogram.types import Message
+from PIL import Image
+from aiogram.types import Message, ReplyKeyboardRemove
+from pyzbar.pyzbar import decode
+from sqlalchemy import and_
 from sqlalchemy.exc import NoResultFound
 
+from data.keyboards import keyboards_by_rank
 from database.base import DBSession
 from database.models import User, Event, Interest, Achievement, LocalGroup, EventFeedbacks
+from database.models.event import EventCodes, EventUsers
 from database.queries.events import get_editing_event
 from database.queries.users import get_user_by_id
 from enums.ranks import Rank
+from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
 
@@ -21,79 +28,32 @@ class DataInput(ABC):
         self.to_step = to_step
 
     @abstractmethod
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
         pass
 
-    def input(self, db_session: DBSession, user: User, message: Message) -> str:
+    async def input(self, db_session: DBSession, user: User, message: Message):
         user.step = self.to_step
-        answer = self.abstract_input(db_session, user, message)
+        text = await self.abstract_input(db_session, user, message)
+
+        reply_markup = ReplyKeyboardRemove()
+        if user.step == Step.NONE:
+            reply_markup = keyboards_by_rank[user.rank]
+        await message.answer(text, reply_markup=reply_markup)
         db_session.commit_session()
-        return answer
-
-    @abstractmethod
-    def can_input(self, user, message) -> bool:
-        pass
-
-
-class FirstNameInput(DataInput, ABC):
-    def __init__(self):
-        super().__init__(Step.ENTER_FIRST_NAME, Step.ENTER_MIDDLE_NAME)
-
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
-        user.first_name = message.text
-        return 'Теперь введите отчество'
 
     def can_input(self, user, message) -> bool:
-        return True
+        return message.text is not None
 
 
-class MiddleNameInput(DataInput, ABC):
-    def __init__(self):
-        super().__init__(Step.ENTER_MIDDLE_NAME, Step.ENTER_LAST_NAME)
+class UserDataInput(DataInput, ABC):
+    def __init__(self, from_step, to_step, _lambda, next_message):
+        super().__init__(from_step, to_step)
+        self._lambda = _lambda
+        self.next_message = next_message
 
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
-        user.middle_name = message.text
-        return 'Теперь введите фамилию'
-
-    def can_input(self, user, message) -> bool:
-        return True
-
-
-class LastNameInput(DataInput, ABC):
-    def __init__(self):
-        super().__init__(Step.ENTER_LAST_NAME, Step.ENTER_PHONE)
-
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
-        user.last_name = message.text
-        return f'Приятно познакомиться, {user.first_name} {user.middle_name} {user.last_name}\n\nПожалуйста, введите ' \
-               f'ваш номер телефона '
-
-    def can_input(self, user, message) -> bool:
-        return True
-
-
-class PhoneInput(DataInput, ABC):
-    def __init__(self):
-        super().__init__(Step.ENTER_PHONE, Step.ENTER_EMAIL)
-
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
-        user.phone = message.text
-        return 'Остался последний шаг! Введите e-mail'
-
-    def can_input(self, user, message) -> bool:
-        return True
-
-
-class EmailInput(DataInput, ABC):
-    def __init__(self):
-        super().__init__(Step.ENTER_EMAIL, Step.NONE)
-
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
-        user.email = message.text
-        return 'Вы успешно авторизованы'
-
-    def can_input(self, user, message) -> bool:
-        return True
+    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
+        self._lambda(user, message.text)
+        return self.next_message
 
 
 class AppointAsInput(DataInput, ABC):
@@ -105,7 +65,7 @@ class AppointAsInput(DataInput, ABC):
         self.rank = rank
         self.name = name
 
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
         text = message.text
         if 'отмена' in text.lower():
             return 'Операция успешно отменена'
@@ -114,8 +74,7 @@ class AppointAsInput(DataInput, ABC):
             try:
                 target_user = get_user_by_id(db_session, uid)
                 target_user.rank = self.rank
-                return f'{target_user.first_name} {target_user.middle_name} {target_user.last_name} успешно назначен ' \
-                       f'{self.name}'
+                return f'{target_user.first_name} {target_user.middle_name} {target_user.last_name} успешно назначен {self.name}'
             except NoResultFound:
                 user.step = self.from_step
                 return f'Пользователя с таким ({text}) ID не существует. Попробуйте снова или напишите \'отмена\''
@@ -123,23 +82,16 @@ class AppointAsInput(DataInput, ABC):
             user.step = self.from_step
             return f'{text} - не число. Попробуйте снова или напишите \'отмена\''
 
-    def can_input(self, user, message) -> bool:
-        return True
-
 
 class EventNameInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.ENTER_NEW_EVENT_NAME, Step.NONE)
+        super().__init__(Step.NEW_EVENT_NAME, Step.NONE)
 
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
         event = Event(name=message.text, status=StatusEvent.UNFINISHED)
         event.users.append(user)
         db_session.add_model(event)
-        return 'Мероприятие успешно создано. Теперь вы можете перейти в его настройки и указать дату, описание и ' \
-               'местоположение '
-
-    def can_input(self, user, text) -> bool:
-        return True
+        return 'Мероприятие успешно создано. Теперь вы можете перейти в его настройки и указать дату, описание и местоположение '
 
 
 class ManageSomethingDataInput(DataInput, ABC):
@@ -151,7 +103,7 @@ class ManageSomethingDataInput(DataInput, ABC):
         self._lambda = _lambda
         self.removing = str(from_step).endswith('REMOVE')
 
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
         new_name = message.text
         if 'отмена' in new_name.lower():
             return 'Операция успешно отменена'
@@ -171,45 +123,84 @@ class ManageSomethingDataInput(DataInput, ABC):
 
         return 'Операция успешно выполнена'
 
-    def can_input(self, user, text) -> bool:
-        return True
-
 
 class FeedbackToEventInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.ENTER_FEEDBACK_TEXT, Step.NONE)
+        super().__init__(Step.FEEDBACK_TEXT, Step.NONE)
 
-    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
         editor = get_editing_event(db_session, user.id)
         eid = editor.event_id
         db_session.add_model(EventFeedbacks(event_id=eid, fb_text=message.text))
         db_session.delete_model(editor)
         return 'Отзыв отправлен!'
 
-    def can_input(self, user, text) -> bool:
-        return True
+
+class MarkPresentInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.VERIFICATION_PRESENT, Step.NONE)
+
+    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
+        if message.text is not None:
+            if 'отмена' in message.text.lower():
+                return 'Операция успешно отменена'
+            code = message.text
+        else:
+            photo = message.photo[-1]
+
+            await photo.download(destination_file=f'{photo.file_id}.jpg')
+
+            img = Image.open(f'{photo.file_id}.jpg')
+            try:
+                code = decode(img)[-1].data
+            except IndexError:
+                user.step = Step.VERIFICATION_PRESENT
+                return 'Произошла ошибка при распознавании QR-кода. Попробуйте снова или напишите \'отмена\''
+            finally:
+                img.close()
+                os.remove(f'{photo.file_id}.jpg')
+
+        try:
+            event_codes = db_session.query(EventCodes).filter(EventCodes.code == code).one()
+
+            event_users = db_session.query(EventUsers).filter(
+                and_(EventUsers.event_id == event_codes.event_id, EventUsers.user_id == event_codes.user_id)).one()
+            event_users.status_attendion = StatusAttendion.ARRIVED
+
+            db_session.delete_model(event_codes)
+
+            return 'Пользователь успешно отмечен'
+        except NoResultFound as e:
+            user.step = Step.VERIFICATION_PRESENT
+            return f'Произошла ошибка ({e.code}). Попробуйте снова или напишите \'отмена\''
+
+    def can_input(self, user, message: Message) -> bool:
+        return message.text is not None or len(message.photo) != 0
 
 
-data_inputs = [FirstNameInput(),
-               MiddleNameInput(),
-               LastNameInput(),
-               PhoneInput(),
-               EmailInput(),
-               EventNameInput(),
-               FeedbackToEventInput(),
-               AppointAsInput(Step.ENTER_NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
-               ManageSomethingDataInput(Step.ENTER_INTEREST_NAME_FOR_ADD, Step.NONE, 'Интерес', Interest, Interest.name,
-                                        lambda n: Interest(name=n)),
-               ManageSomethingDataInput(Step.ENTER_INTEREST_NAME_FOR_REMOVE, Step.NONE, 'Интерес', Interest,
-                                        Interest.name, None),
-               ManageSomethingDataInput(Step.ENTER_ACHIEVEMENT_NAME_FOR_ADD, Step.NONE, 'Достижение', Achievement,
-                                        Achievement.name, lambda n: Achievement(name=n)),
-               ManageSomethingDataInput(Step.ENTER_ACHIEVEMENT_NAME_FOR_REMOVE, Step.NONE, 'Достижение', Achievement,
-                                        Achievement.name, None),
-               ManageSomethingDataInput(Step.ENTER_GROUP_NAME_FOR_ADD, Step.NONE, 'Группа', LocalGroup, LocalGroup.name,
-                                        lambda n: LocalGroup(name=n)),
-               ManageSomethingDataInput(Step.ENTER_GROUP_NAME_FOR_REMOVE, Step.NONE, 'Группа', LocalGroup,
-                                        LocalGroup.name, None)]
+data_inputs = [
+    UserDataInput(Step.FIRST_NAME, Step.MIDDLE_NAME, lambda u, t: u.set_first_name(t), 'Теперь введите отчество'),
+    UserDataInput(Step.MIDDLE_NAME, Step.LAST_NAME, lambda u, t: u.set_middle_name(t), 'Теперь введите фамилию'),
+    UserDataInput(Step.LAST_NAME, Step.PHONE, lambda u, t: u.set_last_name(t),
+                  'Пожалуйста, введите ваш номер телефона'),
+    UserDataInput(Step.PHONE, Step.EMAIL, lambda u, t: u.set_phone(t), 'Остался последний шаг! Введите e-mail'),
+    UserDataInput(Step.EMAIL, Step.NONE, lambda u, t: u.set_email(t), 'Вы успешно авторизованы'),
+    EventNameInput(),
+    FeedbackToEventInput(),
+    MarkPresentInput(),
+    AppointAsInput(Step.NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
+    ManageSomethingDataInput(Step.INTEREST_NAME_FOR_ADD, Step.NONE, 'Интерес', Interest, Interest.name,
+                             lambda n: Interest(name=n)),
+    ManageSomethingDataInput(Step.INTEREST_NAME_FOR_REMOVE, Step.NONE, 'Интерес', Interest,
+                             Interest.name, None),
+    ManageSomethingDataInput(Step.ACHIEVEMENT_NAME_FOR_ADD, Step.NONE, 'Достижение', Achievement,
+                             Achievement.name, lambda n: Achievement(name=n)),
+    ManageSomethingDataInput(Step.ACHIEVEMENT_NAME_FOR_REMOVE, Step.NONE, 'Достижение', Achievement,
+                             Achievement.name, None),
+    ManageSomethingDataInput(Step.GROUP_NAME_FOR_ADD, Step.NONE, 'Группа', LocalGroup, LocalGroup.name,
+                             lambda n: LocalGroup(name=n)),
+    ManageSomethingDataInput(Step.GROUP_NAME_FOR_REMOVE, Step.NONE, 'Группа', LocalGroup,
+                             LocalGroup.name, None)]
 
 
 def get_data_input(user, message):

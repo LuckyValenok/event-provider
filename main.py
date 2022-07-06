@@ -1,6 +1,7 @@
 import logging
 
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import ContentType
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -31,7 +32,7 @@ async def send_welcome(message: types.Message):
         await message.answer('Вы уже авторизованы')
     else:
         db_session.add_model(
-            model=User(id=message.from_user.id, rank=Rank.USER, step=Step.ENTER_FIRST_NAME))
+            model=User(id=message.from_user.id, rank=Rank.USER, step=Step.FIRST_NAME))
         db_session.commit_session()
         await message.answer(f'Привет, {message.from_user.first_name}. Я бот, помогающий в организации/проведении '
                              f'мероприятий'
@@ -49,12 +50,12 @@ async def send_menu(message: types.Message):
         await message.answer('Буп', reply_markup=keyboards_by_rank[user.rank])
 
 
-@dp.message_handler()
+@dp.message_handler(content_types=[ContentType.PHOTO, ContentType.TEXT])
 async def send_other(message: types.Message):
     user = users.get_user_by_id(db_session, message.from_user.id)
     data_input = get_data_input(user, message)
     if data_input is not None:
-        await message.answer(data_input.input(db_session, user, message))
+        await data_input.input(db_session, user, message)
         return
     command = get_command(user, message)
     if command is not None:

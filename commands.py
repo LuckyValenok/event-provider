@@ -146,12 +146,13 @@ commands = [GetMyEventsCommand(),
             ManageSomethingCommand('Интересы', Interest),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),
-            AddSomethingCommand(Rank.ADMIN, Step.ENTER_NEW_ORGANIZER_ID, 'организатора', 'ID'),
-            AddSomethingCommand(Rank.ORGANIZER, Step.ENTER_NEW_EVENT_NAME, 'мероприятие', 'название'),
-            UnknownCommand()]
+            AddSomethingCommand(Rank.ADMIN, Step.NEW_ORGANIZER_ID, 'организатора', 'ID'),
+            AddSomethingCommand(Rank.ORGANIZER, Step.NEW_EVENT_NAME, 'мероприятие', 'название')]
 
 
 def get_command(user, message) -> Command:
     for command in commands:
-        if command.can_execute(user, message):
+        if message.text is not None and command.can_execute(user, message):
             return command
+
+    return UnknownCommand()

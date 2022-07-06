@@ -168,7 +168,7 @@ class UserFeedbackCallback(Callback, ABC):
         await query.message.delete()
         eid = int(query.data.split('_')[-1])
         db_session.add_model(EventEditors(event_id=eid, user_id=user.id))
-        user.step = Step.ENTER_FEEDBACK_TEXT
+        user.step = Step.FEEDBACK_TEXT
         db_session.commit_session()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
@@ -213,25 +213,54 @@ class CancelEventCallback(Callback, ABC):
         return query.data.startswith('ecan_') and (user.rank is Rank.USER or user.rank is Rank.MODER)
 
 
+class MarkPresentCallback(Callback, ABC):
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        await query.answer()
+
+        eid = int(query.data.split('_')[-1])
+        try:
+            event = get_event_by_id(db_session, eid)
+            if event.status == StatusEvent.UNFINISHED:
+                user.step = Step.VERIFICATION_PRESENT
+
+                db_session.add_model(EventEditors(event_id=event.id, user_id=user.id))
+
+                await query.message.answer(
+                    'Вам необходимо прислать фото QR-кода, текстовый код для подтверждения или \'отмена\' для отмены '
+                    'действия')
+
+                db_session.commit_session()
+            else:
+                await query.message.answer("Мероприятие уже завершилось")
+        except NoResultFound:
+            await query.message.answer('Такого мероприятия нет')
+
+        await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('marpr_') and user.rank is Rank.MODER
+
+
 callbacks = [TakePartCallback(),
              UserFeedbackCallback(),
              CancelEventCallback(),
-             ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
+             MarkPresentCallback(),
+             ManageSomethingCallback(None, User, 'change', Step.FIRST_NAME, 'Напиши свое имя'),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
                                           lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
              ManageUserAttachmentCallback('Группы', 'Групп', LocalGroup, UserGroups, UserGroups.group_id,
                                           lambda u, g, a: u.groups.append(g) if a else u.groups.remove(g)),
-             ManageSomethingCallback(Rank.ADMIN, Interest, 'add', Step.ENTER_INTEREST_NAME_FOR_ADD,
+             ManageSomethingCallback(Rank.ADMIN, Interest, 'add', Step.INTEREST_NAME_FOR_ADD,
                                      'Напишите название нового интереса'),
-             ManageSomethingCallback(Rank.ADMIN, Interest, 'remove', Step.ENTER_INTEREST_NAME_FOR_REMOVE,
+             ManageSomethingCallback(Rank.ADMIN, Interest, 'remove', Step.INTEREST_NAME_FOR_REMOVE,
                                      'Напишите название интереса для удаления'),
-             ManageSomethingCallback(Rank.ADMIN, Achievement, 'add', Step.ENTER_ACHIEVEMENT_NAME_FOR_ADD,
+             ManageSomethingCallback(Rank.ADMIN, Achievement, 'add', Step.ACHIEVEMENT_NAME_FOR_ADD,
                                      'Напишите название нового достижения'),
-             ManageSomethingCallback(Rank.ADMIN, Achievement, 'remove', Step.ENTER_ACHIEVEMENT_NAME_FOR_REMOVE,
+             ManageSomethingCallback(Rank.ADMIN, Achievement, 'remove', Step.ACHIEVEMENT_NAME_FOR_REMOVE,
                                      'Напишите название достижения для удаления'),
-             ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'add', Step.ENTER_GROUP_NAME_FOR_ADD,
+             ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'add', Step.GROUP_NAME_FOR_ADD,
                                      'Напишите название новой группы'),
-             ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.ENTER_GROUP_NAME_FOR_REMOVE,
+             ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.GROUP_NAME_FOR_REMOVE,
                                      'Напишите название группы для удаления'),
              GetAttendentStatisticsCallback(),
              FeedbackStatisticsCallback(),

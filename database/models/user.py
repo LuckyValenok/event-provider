@@ -3,8 +3,8 @@ from sqlalchemy.orm import relation
 
 from enums.ranks import Rank
 from enums.steps import Step
-from .base import BaseModel
 from .achievement import Achievement
+from .base import BaseModel
 from .interest import Interest
 from .local_group import LocalGroup
 
@@ -54,3 +54,18 @@ class User(BaseModel):
         LocalGroup,
         secondary=UserGroups.__tablename__
     )
+
+    def set_first_name(self, name):
+        self.first_name = name
+
+    def set_middle_name(self, name):
+        self.middle_name = name
+
+    def set_last_name(self, name):
+        self.last_name = name
+
+    def set_email(self, email):
+        self.email = email
+
+    def set_phone(self, phone):
+        self.phone = phone
