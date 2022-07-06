@@ -177,14 +177,11 @@ class UserFeedbackCallback(Callback, ABC):
 
 class FeedbackStatisticsCallback(Callback, ABC):
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
-        eid = int(query.data.split('_')[-1])
-        events_fb = get_feedbacks(db_session, eid)
-        for cur_event in events_fb:
-            await query.message.answer(cur_event.fb_text)
         await query.answer()
-
+        eid = int(query.data.split('_')[-1])
+        for feedback in get_feedbacks(db_session, eid):
+            await query.message.answer(feedback.fb_text)
         await query.message.delete()
-
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('fbst_') and user.rank is Rank.ORGANIZER

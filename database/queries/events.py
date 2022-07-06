@@ -44,5 +44,5 @@ def get_code_model_by_id(session: DBSession, eid: int, uid: int) -> EventCodes:
     return session.query(EventCodes).filter(and_(EventCodes.event_id == eid, EventCodes.user_id == uid)).one()
 
 
-def get_feedbacks(session: DBSession, eid: int) -> EventFeedbacks:
+def get_feedbacks(session: DBSession, eid: int):
     return session.query(EventFeedbacks).filter(EventFeedbacks.event_id == eid).all()
