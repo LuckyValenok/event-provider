@@ -4,7 +4,7 @@ import string
 from sqlalchemy import and_
 
 from database.base import DBSession
-from database.models import Event, User, EventUsers, EventEditors
+from database.models import Event, User, EventUsers, EventEditors, EventFeedbacks
 from database.models.event import EventCodes
 from enums.ranks import Rank
 from enums.status_attendion import StatusAttendion
@@ -42,3 +42,7 @@ def get_new_code(session: DBSession) -> str:
 
 def get_code_model_by_id(session: DBSession, eid: int, uid: int) -> EventCodes:
     return session.query(EventCodes).filter(and_(EventCodes.event_id == eid, EventCodes.user_id == uid)).one()
+
+
+def get_feedbacks(session: DBSession, eid: int) -> EventFeedbacks:
+    return session.query(EventFeedbacks).filter(EventFeedbacks.event_id == eid).all()

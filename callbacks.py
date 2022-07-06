@@ -10,7 +10,7 @@ from database.models import User, Interest, Achievement, LocalGroup, UserInteres
 from database.models.base import BaseModel
 from database.models.event import EventCodes
 from database.queries import events
-from database.queries.events import get_event_by_id, get_new_code, get_code_model_by_id
+from database.queries.events import get_event_by_id, get_new_code, get_code_model_by_id, get_feedbacks
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
@@ -178,10 +178,13 @@ class UserFeedbackCallback(Callback, ABC):
 class FeedbackStatisticsCallback(Callback, ABC):
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
         eid = int(query.data.split('_')[-1])
+        events_fb = get_feedbacks(db_session, eid)
+        for cur_event in events_fb:
+            await query.message.answer(cur_event.fb_text)
         await query.answer()
-        # await query.message.answer()
+
         await query.message.delete()
-        # TODO: Тут вывод отзывов
+
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('fbst_') and user.rank is Rank.ORGANIZER
