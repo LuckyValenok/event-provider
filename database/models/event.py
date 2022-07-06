@@ -29,6 +29,20 @@ class EventUsers(BaseModel):
     status_attendion = Column(Enum(StatusAttendion), nullable=False, default=StatusAttendion.NOT_ARRIVED, index=True)
 
 
+class EventFeedbacks(BaseModel):
+    __tablename__ = 'event_feedbacks'
+
+    event_id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'), nullable=False, index=True)
+    fb_text = Column(VARCHAR(255), nullable=True)
+
+
+class EventEditors(BaseModel):
+    __tablename__ = 'event_editors'
+
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    event_id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'), nullable=False, index=True)
+
+
 class Event(BaseModel):
     __tablename__ = 'event'
 

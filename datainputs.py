@@ -4,9 +4,11 @@ from aiogram.types import Message
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
-from database.models import User, Event, Interest, Achievement, LocalGroup
+from database.models import User, Event, Interest, Achievement, LocalGroup, EventFeedbacks
+from database.queries.events import get_editing_event
 from database.queries.users import get_user_by_id
 from enums.ranks import Rank
+from enums.status_event import StatusEvent
 from enums.steps import Step
 
 
@@ -130,7 +132,7 @@ class EventNameInput(DataInput, ABC):
         super().__init__(Step.ENTER_NEW_EVENT_NAME, Step.NONE)
 
     def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
-        event = Event(name=message.text)
+        event = Event(name=message.text, status=StatusEvent.UNFINISHED)
         event.users.append(user)
         db_session.add_model(event)
         return 'Мероприятие успешно создано. Теперь вы можете перейти в его настройки и указать дату, описание и ' \
@@ -173,13 +175,28 @@ class ManageSomethingDataInput(DataInput, ABC):
         return True
 
 
+class FeedbackToEventInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ENTER_FEEDBACK_TEXT, Step.NONE)
+
+    def abstract_input(self, db_session: DBSession, user: User, message: Message) -> str:
+        editor = get_editing_event(db_session, user.id)
+        eid = editor.event_id
+        db_session.add_model(EventFeedbacks(event_id=eid, fb_text=message.text))
+        db_session.delete_model(editor)
+        return 'Отзыв отправлен!'
+
+    def can_input(self, user, text) -> bool:
+        return True
+
+
 data_inputs = [FirstNameInput(),
                MiddleNameInput(),
                LastNameInput(),
                PhoneInput(),
                EmailInput(),
-               AppointAsInput(Step.ENTER_NEW_MANAGER_ID, Step.NONE, Rank.MANAGER, 'менеджером'),
                EventNameInput(),
+               FeedbackToEventInput(),
                AppointAsInput(Step.ENTER_NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
                ManageSomethingDataInput(Step.ENTER_INTEREST_NAME_FOR_ADD, Step.NONE, 'Интерес', Interest, Interest.name,
                                         lambda n: Interest(name=n)),

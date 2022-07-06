@@ -1,15 +1,30 @@
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
 from enums.ranks import Rank
+from enums.status_event import StatusEvent
 
 keyboards_by_rank = {
-    Rank.USER: ReplyKeyboardMarkup(resize_keyboard=True).add(*['Все мероприятия', 'Мои мероприятия', 'Мой профиль']),
-    Rank.MODER: ReplyKeyboardMarkup(resize_keyboard=True).add(*['Все мероприятия', 'Мои мероприятия', 'Мой профиль']),
-    Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2).add(
-        *['Добавить мероприятие', 'Мои мероприятия', 'Статистика', 'Настройки']),
-    Rank.MANAGER: ReplyKeyboardMarkup(resize_keyboard=True).add(*['Добавить организатора', 'Статистика']),
-    Rank.ADMIN: ReplyKeyboardMarkup(resize_keyboard=True).add(
-        *['Интересы', 'Группы', 'Достижения', 'Добавить менеджера', 'Статистика'])
+    Rank.USER: ReplyKeyboardMarkup(resize_keyboard=True).add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
+    Rank.MODER: ReplyKeyboardMarkup(resize_keyboard=True).add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
+    Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2).add('Добавить мероприятие',
+                                                                               'Мои мероприятия', 'Статистика',
+                                                                               'Настройки'),
+    Rank.ADMIN: ReplyKeyboardMarkup(resize_keyboard=True).add('Интересы', 'Группы', 'Достижения', 'Добавить организатора',
+                                                              'Статистика')
+}
+
+keyboards_by_status_event_and_by_rank = {
+    StatusEvent.UNFINISHED: {
+    },
+    StatusEvent.FINISHED: {
+        Rank.ORGANIZER: lambda e: InlineKeyboardMarkup().add(
+            InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{e.id}"),
+            InlineKeyboardButton('Просмотреть отзывы', callback_data=f"fbst_{e.id}")),
+        Rank.USER: lambda e: InlineKeyboardMarkup().add(
+            InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{e.id}")),
+        Rank.MODER: lambda e: InlineKeyboardMarkup().add(
+            InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{e.id}"))
+    }
 }
 
 profile_inline_keyboard = InlineKeyboardMarkup()

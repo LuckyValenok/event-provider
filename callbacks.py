@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
+from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventEditors
 from database.models.base import BaseModel
 from database.queries import events
 from database.queries.events import get_event_by_id
@@ -131,17 +131,44 @@ class ManageUserAttachmentCallback(Callback, ABC):
 
 class GetAttendentStatisticsCallback(Callback, ABC):
     async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
-        ev_id = int(query.data.split('_')[-1])
+        eid = int(query.data.split('_')[-1])
         await query.answer()
         await query.message.answer(
-            f"В мероприятии участвовал(-и) {events.get_count_visited(db_session, ev_id)} человек(-а).")
+            f"В мероприятии участвовал(-и) {events.get_count_visited(db_session, eid)} человек(-а).")
         await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
-        return query.data.startswith('atst_')
+        return query.data.startswith('atst_') and user.rank is Rank.ORGANIZER
+
+
+class UserFeedbackCallback(Callback, ABC):
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        await query.answer()
+        await query.message.answer('Оставьте свой отзыв :)')
+        await query.message.delete()
+        eid = int(query.data.split('_')[-1])
+        db_session.add_model(EventEditors(event_id=eid, user_id=user.id))
+        user.step = Step.ENTER_FEEDBACK_TEXT
+        db_session.commit_session()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('feb_') and (user.rank is Rank.USER or user.rank is Rank.MODER)
+
+
+class FeedbackStatisticsCallback(Callback, ABC):
+    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+        eid = int(query.data.split('_')[-1])
+        await query.answer()
+        # await query.message.answer()
+        await query.message.delete()
+        # TODO: Тут вывод отзывов
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('fbst_') and user.rank is Rank.ORGANIZER
 
 
 callbacks = [TakePartCallback(),
+             UserFeedbackCallback(),
              ManageSomethingCallback(None, User, 'change', Step.ENTER_FIRST_NAME, 'Напиши свое имя'),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
                                           lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
@@ -160,6 +187,7 @@ callbacks = [TakePartCallback(),
              ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.ENTER_GROUP_NAME_FOR_REMOVE,
                                      'Напишите название группы для удаления'),
              GetAttendentStatisticsCallback(),
+             FeedbackStatisticsCallback(),
              UnknownCallback()]
 
 
