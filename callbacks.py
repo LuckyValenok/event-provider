@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
+from io import BytesIO
 
+import qrcode
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.exc import NoResultFound
 
 from database.base import DBSession
 from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventEditors
 from database.models.base import BaseModel
+from database.models.event import EventCodes
 from database.queries import events
-from database.queries.events import get_event_by_id
+from database.queries.events import get_event_by_id, get_new_code, get_code_model_by_id
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
@@ -68,13 +71,29 @@ class TakePartCallback(Callback, ABC):
         eid = int(query.data.split('_')[-1])
         try:
             event = get_event_by_id(db_session, eid)
-            if user in event.users:
-                await query.message.answer("Вы уже принимаете участие в мероприятии.")
+            if user in event.users or event.status == StatusEvent.FINISHED:
+                await query.message.answer("Вы уже принимаете участие в мероприятии или оно уже завершилось")
             else:
                 event.users.append(user)
-                db_session.commit_session()
 
                 await query.message.answer('Поздравляем, Вы принимаете участие в мероприятии!')
+
+                code = get_new_code(db_session)
+
+                db_session.add_model(EventCodes(event_id=event.id, user_id=user.id, code=code))
+
+                img = qrcode.make(code)
+
+                output = BytesIO()
+                img.save(output, "PNG")
+                output.seek(0)
+
+                await query.message.answer(f'Ваш код, который вы должны предоставить модератору мероприятия: {code}\n'
+                                           f'Или QR-код:')
+                await query.message.answer_photo(output)
+                output.close()
+
+                db_session.commit_session()
         except NoResultFound:
             await query.message.answer('Такого мероприятия нет')
 
@@ -177,9 +196,12 @@ class CancelEventCallback(Callback, ABC):
             event = get_event_by_id(db_session, eid)
             if user in event.users and event.status == StatusEvent.UNFINISHED:
                 event.users.remove(user)
-                db_session.commit_session()
+
+                db_session.delete_model(get_code_model_by_id(db_session, event.id, user.id))
 
                 await query.message.answer('Вы отменили заявку на участие в мероприятии')
+
+                db_session.commit_session()
             else:
                 await query.message.answer("Вы уже не принимаете участие в этом мероприятии или оно завершилось")
         except NoResultFound:

@@ -1,7 +1,11 @@
+import random
+import string
+
 from sqlalchemy import and_
 
 from database.base import DBSession
 from database.models import Event, User, EventUsers, EventEditors
+from database.models.event import EventCodes
 from enums.ranks import Rank
 from enums.status_attendion import StatusAttendion
 
@@ -27,3 +31,14 @@ def get_count_visited(session: DBSession, eid: int) -> int:
 
 def get_editing_event(session: DBSession, eid: int) -> EventEditors:
     return session.query(EventEditors).filter(EventEditors.user_id == eid).one()
+
+
+def get_new_code(session: DBSession) -> str:
+    code = None
+    while code is None or session.query(EventCodes).filter(EventCodes.code == code).count() > 0:
+        code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+    return code
+
+
+def get_code_model_by_id(session: DBSession, eid: int, uid: int) -> EventCodes:
+    return session.query(EventCodes).filter(and_(EventCodes.event_id == eid, EventCodes.user_id == uid)).one()

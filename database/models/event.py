@@ -43,6 +43,14 @@ class EventEditors(BaseModel):
     event_id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'), nullable=False, index=True)
 
 
+class EventCodes(BaseModel):
+    __tablename__ = 'event_codes'
+
+    event_id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    code = Column(VARCHAR(8), nullable=False, index=True)
+
+
 class Event(BaseModel):
     __tablename__ = 'event'
 
