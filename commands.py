@@ -148,6 +148,7 @@ commands = [GetMyEventsCommand(),
             ManageSomethingCommand('Достижения', Achievement),
             AddSomethingCommand(Rank.ADMIN, Step.NEW_ORGANIZER_ID, 'организатора', 'ID'),
             AddSomethingCommand(Rank.ORGANIZER, Step.NEW_EVENT_NAME, 'мероприятие', 'название')]
+unknown_command = UnknownCommand()
 
 
 def get_command(user, message) -> Command:
@@ -155,4 +156,4 @@ def get_command(user, message) -> Command:
         if message.text is not None and command.can_execute(user, message):
             return command
 
-    return UnknownCommand()
+    return unknown_command
