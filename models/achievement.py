@@ -1,6 +1,6 @@
 from sqlalchemy import Column, VARCHAR
 
-from .base import BaseModel
+from .basemodel import BaseModel
 
 
 class Achievement(BaseModel):

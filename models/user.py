@@ -4,7 +4,7 @@ from sqlalchemy.orm import relation
 from enums.ranks import Rank
 from enums.steps import Step
 from .achievement import Achievement
-from .base import BaseModel
+from .basemodel import BaseModel
 from .interest import Interest
 from .local_group import LocalGroup
 

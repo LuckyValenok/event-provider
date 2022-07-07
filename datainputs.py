@@ -1,22 +1,13 @@
-import os
 from abc import ABC, abstractmethod
 
-from PIL import Image
 from aiogram.types import Message, ReplyKeyboardRemove
-from pyzbar.pyzbar import decode
-from sqlalchemy import and_
 from sqlalchemy.exc import NoResultFound
 
+from controller import Controller, get_code_from_photo
 from data.keyboards import keyboards_by_rank
-from database.base import DBSession
-from database.models import User, Event, Interest, Achievement, LocalGroup, EventFeedbacks
-from database.models.event import EventCodes, EventUsers
-from database.queries.events import get_editor_event
-from database.queries.users import get_user_by_id
 from enums.ranks import Rank
-from enums.status_attendion import StatusAttendion
-from enums.status_event import StatusEvent
 from enums.steps import Step
+from models import User, Interest, Achievement, LocalGroup
 
 
 class DataInput(ABC):
@@ -28,18 +19,18 @@ class DataInput(ABC):
         self.to_step = to_step
 
     @abstractmethod
-    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
         pass
 
-    async def input(self, db_session: DBSession, user: User, message: Message):
+    async def input(self, controller: Controller, user: User, message: Message):
         user.step = self.to_step
-        text = await self.abstract_input(db_session, user, message)
+        text = await self.abstract_input(controller, user, message)
 
         reply_markup = ReplyKeyboardRemove()
         if user.step == Step.NONE:
             reply_markup = keyboards_by_rank[user.rank]
         await message.answer(text, reply_markup=reply_markup)
-        db_session.commit_session()
+        controller.save()
 
     def can_input(self, user, message) -> bool:
         return message.text is not None
@@ -51,7 +42,7 @@ class UserDataInput(DataInput, ABC):
         self._lambda = _lambda
         self.next_message = next_message
 
-    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
         self._lambda(user, message.text)
         return self.next_message
 
@@ -65,14 +56,14 @@ class AppointAsInput(DataInput, ABC):
         self.rank = rank
         self.name = name
 
-    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
         text = message.text
         if 'отмена' in text.lower():
             return 'Операция успешно отменена'
         try:
             uid = int(text)
             try:
-                target_user = get_user_by_id(db_session, uid)
+                target_user = controller.get_user_by_id(uid)
                 target_user.rank = self.rank
                 return f'{target_user.first_name} {target_user.middle_name} {target_user.last_name} успешно назначен {self.name}'
             except NoResultFound:
@@ -87,11 +78,10 @@ class EventNameInput(DataInput, ABC):
     def __init__(self):
         super().__init__(Step.NEW_EVENT_NAME, Step.NONE)
 
-    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
-        event = Event(name=message.text, status=StatusEvent.UNFINISHED)
-        event.users.append(user)
-        db_session.add_model(event)
-        return 'Мероприятие успешно создано. Теперь вы можете перейти в его настройки и указать дату, описание и местоположение '
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        controller.create_event(message.text, user)
+        return 'Мероприятие успешно создано. Теперь вы можете перейти в его настройки и указать дату, описание и ' \
+               'местоположение '
 
 
 class ManageSomethingDataInput(DataInput, ABC):
@@ -103,36 +93,20 @@ class ManageSomethingDataInput(DataInput, ABC):
         self._lambda = _lambda
         self.removing = str(from_step).endswith('REMOVE')
 
-    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
         new_name = message.text
         if 'отмена' in new_name.lower():
             return 'Операция успешно отменена'
-        if self.removing:
-            try:
-                db_session.delete_model(db_session.query(self.model).filter(self.model_column == new_name).one())
-            except NoResultFound:
-                user.step = self.from_step
-                return 'Такого объекта нет. Попробуйте снова или напишите \'отмена\''
-        else:
-            try:
-                db_session.query(self.model).filter(self.model_column == new_name).one()
-                user.step = self.from_step
-                return f'Уже существует {self.name.lower()} с данным названием. Попробуйте снова или напишите \'отмена\''
-            except NoResultFound:
-                db_session.add_model(self._lambda(new_name))
-
-        return 'Операция успешно выполнена'
+        return controller.manage_something_model(user, self.from_step, self.name, self.model, self.model_column,
+                                                 new_name, self._lambda, self.removing)
 
 
 class FeedbackToEventInput(DataInput, ABC):
     def __init__(self):
         super().__init__(Step.FEEDBACK_TEXT, Step.NONE)
 
-    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
-        editor = get_editor_event(db_session, user.id)
-        eid = editor.event_id
-        db_session.add_model(EventFeedbacks(event_id=eid, fb_text=message.text))
-        db_session.delete_model(editor)
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        controller.add_feedback_to_event(user, message.text)
         return 'Отзыв отправлен!'
 
 
@@ -140,7 +114,7 @@ class MarkPresentInput(DataInput, ABC):
     def __init__(self):
         super().__init__(Step.VERIFICATION_PRESENT, Step.NONE)
 
-    async def abstract_input(self, db_session: DBSession, user: User, message: Message):
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
         if message.text is not None:
             if 'отмена' in message.text.lower():
                 return 'Операция успешно отменена'
@@ -150,25 +124,13 @@ class MarkPresentInput(DataInput, ABC):
 
             await photo.download(destination_file=f'{photo.file_id}.jpg')
 
-            img = Image.open(f'{photo.file_id}.jpg')
-            try:
-                code = decode(img)[-1].data
-            except IndexError:
+            code = get_code_from_photo(f'{photo.file_id}.jpg')
+            if code is None:
                 user.step = Step.VERIFICATION_PRESENT
                 return 'Произошла ошибка при распознавании QR-кода. Попробуйте снова или напишите \'отмена\''
-            finally:
-                img.close()
-                os.remove(f'{photo.file_id}.jpg')
 
         try:
-            event_codes = db_session.query(EventCodes).filter(EventCodes.code == code).one()
-
-            event_users = db_session.query(EventUsers).filter(
-                and_(EventUsers.event_id == event_codes.event_id, EventUsers.user_id == event_codes.user_id)).one()
-            event_users.status_attendion = StatusAttendion.ARRIVED
-
-            db_session.delete_model(event_codes)
-            db_session.delete_model(get_editor_event(db_session, user.id))
+            controller.mark_presents(user, code)
 
             return 'Пользователь успешно отмечен'
         except NoResultFound as e:

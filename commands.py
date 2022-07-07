@@ -2,18 +2,17 @@ from abc import ABC, abstractmethod
 
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
+from controller import Controller
 from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_and_by_rank
-from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup
-from database.models.base import BaseModel
-from database.queries.events import get_events_by_user, get_events_not_participate_user
 from enums.ranks import Rank
 from enums.steps import Step
+from models import User, Interest, Achievement, LocalGroup
+from models.basemodel import BaseModel
 
 
 class Command(ABC):
     @abstractmethod
-    async def execute(self, db_session: DBSession, user: User, message: Message):
+    async def execute(self, controller: Controller, user: User, message: Message):
         pass
 
     @abstractmethod
@@ -22,8 +21,8 @@ class Command(ABC):
 
 
 class GetMyEventsCommand(Command, ABC):
-    async def execute(self, db_session: DBSession, user: User, message: Message):
-        events = get_events_by_user(db_session, user.id)
+    async def execute(self, controller: Controller, user: User, message: Message):
+        events = controller.get_events_by_user(user.id)
         if len(events) == 0:
             await message.answer('В данный момент у вас нет мероприятий')
         else:
@@ -52,8 +51,8 @@ class GetMyEventsCommand(Command, ABC):
 
 
 class GetAllEventsCommand(Command, ABC):
-    async def execute(self, db_session: DBSession, user: User, message: Message):
-        events = get_events_not_participate_user(db_session, user.id)
+    async def execute(self, controller: Controller, user: User, message: Message):
+        events = controller.get_events_not_participate_user(user.id)
         if len(events) == 0:
             await message.answer('В данный момент нет активных мероприятий')
         else:
@@ -86,9 +85,8 @@ class AddSomethingCommand(Command, ABC):
         self.name = name
         self._type = _type
 
-    async def execute(self, db_session: DBSession, user: User, message: Message):
-        user.step = self.step
-        db_session.commit_session()
+    async def execute(self, controller: Controller, user: User, message: Message):
+        controller.set_step_to_user(user, self.step)
         await message.answer(f'Ввведите {self._type} нового {self.name}')
 
     def can_execute(self, user: User, message: Message) -> bool:
@@ -103,8 +101,8 @@ class ManageSomethingCommand(Command, ABC):
         self.name = name
         self.model = model
 
-    async def execute(self, db_session: DBSession, user: User, message: Message):
-        entities = db_session.query(self.model).all()
+    async def execute(self, controller: Controller, user: User, message: Message):
+        entities = controller.get_models(self.model)
         keyboard = InlineKeyboardMarkup()
         keyboard.row(InlineKeyboardButton('Добавить', callback_data='add_' + self.model.__tablename__))
         if len(entities) != 0:
@@ -118,7 +116,7 @@ class ManageSomethingCommand(Command, ABC):
 
 
 class GetMyProfileCommand(Command, ABC):
-    async def execute(self, db_session: DBSession, user: User, message: Message):
+    async def execute(self, controller: Controller, user: User, message: Message):
         text = f'🧚{user.first_name} {user.middle_name} {user.last_name}\n' \
                f'├ Номер телефона: {user.phone}\n' \
                f'├ Почта: {user.email}\n' \
@@ -132,7 +130,7 @@ class GetMyProfileCommand(Command, ABC):
 
 
 class UnknownCommand(Command, ABC):
-    async def execute(self, db_session: DBSession, user: User, message: Message):
+    async def execute(self, controller: Controller, user: User, message: Message):
         await message.answer('Неизвестная команда')
 
     def can_execute(self, user: User, message: Message) -> bool:

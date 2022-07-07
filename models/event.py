@@ -4,7 +4,7 @@ from sqlalchemy.orm import relation
 from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from . import User, Interest, LocalGroup
-from .base import BaseModel
+from .basemodel import BaseModel
 
 
 class EventGroups(BaseModel):

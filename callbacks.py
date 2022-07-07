@@ -3,24 +3,19 @@ from io import BytesIO
 
 import qrcode
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from dostoevsky.models import FastTextSocialNetworkModel
-from dostoevsky.tokenization import RegexTokenizer
 from sqlalchemy.exc import NoResultFound
 
-from database.base import DBSession
-from database.models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventEditors
-from database.models.base import BaseModel
-from database.models.event import EventCodes
-from database.queries import events
-from database.queries.events import get_event_by_id, get_new_code, get_code_model_by_id, get_feedbacks
+from controller import Controller
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
+from models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
+from models.basemodel import BaseModel
 
 
 class Callback(ABC):
     @abstractmethod
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         pass
 
     @abstractmethod
@@ -29,7 +24,7 @@ class Callback(ABC):
 
 
 class UnknownCallback(Callback, ABC):
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
         await query.message.answer('Ты куда жмав?')
         await query.message.delete()
@@ -52,11 +47,11 @@ class ManageSomethingCallback(Callback, ABC):
         self.step = step
         self.message = message
 
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
 
         user.step = self.step
-        db_session.commit_session()
+        controller.save()
 
         await query.message.answer(self.message)
         await query.message.delete()
@@ -67,12 +62,12 @@ class ManageSomethingCallback(Callback, ABC):
 
 
 class TakePartCallback(Callback, ABC):
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
 
         eid = int(query.data.split('_')[-1])
         try:
-            event = get_event_by_id(db_session, eid)
+            event = controller.get_event_by_id(eid)
             if user in event.users or event.status == StatusEvent.FINISHED:
                 await query.message.answer("Вы уже принимаете участие в мероприятии или оно уже завершилось")
             else:
@@ -80,9 +75,9 @@ class TakePartCallback(Callback, ABC):
 
                 await query.message.answer('Поздравляем, Вы принимаете участие в мероприятии!')
 
-                code = get_new_code(db_session)
+                code = controller.get_new_code()
 
-                db_session.add_model(EventCodes(event_id=event.id, user_id=user.id, code=code))
+                controller.add_code(event, user, code)
 
                 img = qrcode.make(code)
 
@@ -95,7 +90,7 @@ class TakePartCallback(Callback, ABC):
                 await query.message.answer_photo(output)
                 output.close()
 
-                db_session.commit_session()
+                controller.save()
         except NoResultFound:
             await query.message.answer('Такого мероприятия нет')
 
@@ -114,16 +109,14 @@ class ManageUserAttachmentCallback(Callback, ABC):
         self.relation_column = relation_column
         self._lambda = _lambda
 
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
 
         de_attach = query.data.startswith('de')
 
         if query.data.endswith(self.model.__tablename__):
-            entities = db_session.query(self.model).filter(
-                self.model.id.not_in(db_session.query(self.relation_model).with_entities(self.relation_column).filter(
-                    self.relation_model.user_id == user.id))).all() if not de_attach else db_session.query(
-                self.model).filter(self.relation_model.user_id == user.id).all()
+            entities = controller.get_entities_by_model_with_relationship(user, self.model, self.relation_model,
+                                                                          self.relation_column, de_attach)
             if len(entities) == 0:
                 await query.message.answer('Тут пусто')
             else:
@@ -135,9 +128,9 @@ class ManageUserAttachmentCallback(Callback, ABC):
         else:
             try:
                 eid = int(query.data.split('_')[-1])
-                entity = db_session.query(self.model).filter(self.model.id == eid).one()
+                entity = controller.get_model_by_id(self.model, eid)
                 self._lambda(user, entity, not de_attach)
-                db_session.commit_session()
+                controller.save()
 
                 await query.message.answer(
                     f'{entity.name} успешно {"добавлен в " + self.name.lower() if not de_attach else "удален из " + self.name_remove_form.lower()}')
@@ -152,11 +145,11 @@ class ManageUserAttachmentCallback(Callback, ABC):
 
 
 class GetAttendentStatisticsCallback(Callback, ABC):
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         eid = int(query.data.split('_')[-1])
         await query.answer()
         await query.message.answer(
-            f"В мероприятии участвовал(-и) {events.get_count_visited(db_session, eid)} человек(-а).")
+            f"В мероприятии участвовал(-и) {controller.get_count_visited(eid)} человек(-а).")
         await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
@@ -164,46 +157,25 @@ class GetAttendentStatisticsCallback(Callback, ABC):
 
 
 class UserFeedbackCallback(Callback, ABC):
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
         await query.message.answer('Оставьте свой отзыв :)')
         await query.message.delete()
         eid = int(query.data.split('_')[-1])
-        db_session.add_model(EventEditors(event_id=eid, user_id=user.id))
+        controller.add_event_editor(eid, user.id)
         user.step = Step.FEEDBACK_TEXT
-        db_session.commit_session()
+        controller.save()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('feb_') and (user.rank is Rank.USER or user.rank is Rank.MODER)
 
 
 class FeedbackStatisticsCallback(Callback, ABC):
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
 
-        tokenizer = RegexTokenizer()
-        model = FastTextSocialNetworkModel(tokenizer=tokenizer)
-
-        messages = []
-
         eid = int(query.data.split('_')[-1])
-        for feedback in get_feedbacks(db_session, eid):
-            messages.append(str(feedback.fb_text))
-
-        results = model.predict(messages, k=2)
-        neutral_list = []
-        negative_list = []
-        positive_list = []
-        for sentiment in results:
-            neutral = sentiment.get('neutral')
-            negative = sentiment.get('negative')
-            positive = sentiment.get('positive')
-            if neutral is not None:
-                neutral_list.append(sentiment.get('neutral'))
-            if negative is not None:
-                negative_list.append(sentiment.get('negative'))
-            if positive is not None:
-                positive_list.append(sentiment.get('positive'))
+        messages, neutral_list, negative_list, positive_list = controller.get_feedbacks_statistics(eid)
 
         if len(messages) != 0:
             neutral = sum(neutral_list)
@@ -225,20 +197,20 @@ class FeedbackStatisticsCallback(Callback, ABC):
 
 
 class CancelEventCallback(Callback, ABC):
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
 
         eid = int(query.data.split('_')[-1])
         try:
-            event = get_event_by_id(db_session, eid)
+            event = controller.get_event_by_id(eid)
             if user in event.users and event.status == StatusEvent.UNFINISHED:
                 event.users.remove(user)
 
-                db_session.delete_model(get_code_model_by_id(db_session, event.id, user.id))
+                controller.remove_code(event, user)
 
                 await query.message.answer('Вы отменили заявку на участие в мероприятии')
 
-                db_session.commit_session()
+                controller.save()
             else:
                 await query.message.answer("Вы уже не принимаете участие в этом мероприятии или оно завершилось")
         except NoResultFound:
@@ -251,22 +223,22 @@ class CancelEventCallback(Callback, ABC):
 
 
 class MarkPresentCallback(Callback, ABC):
-    async def callback(self, db_session: DBSession, user: User, query: CallbackQuery):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
 
         eid = int(query.data.split('_')[-1])
         try:
-            event = get_event_by_id(db_session, eid)
+            event = controller.get_event_by_id(eid)
             if event.status == StatusEvent.UNFINISHED:
                 user.step = Step.VERIFICATION_PRESENT
 
-                db_session.add_model(EventEditors(event_id=event.id, user_id=user.id))
+                controller.add_event_editor(event.id, user.id)
 
                 await query.message.answer(
                     'Вам необходимо прислать фото QR-кода, текстовый код для подтверждения или \'отмена\' для отмены '
                     'действия')
 
-                db_session.commit_session()
+                controller.save()
             else:
                 await query.message.answer("Мероприятие уже завершилось")
         except NoResultFound:
