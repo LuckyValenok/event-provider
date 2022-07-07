@@ -7,6 +7,7 @@ from controller import Controller, get_code_from_photo
 from data.keyboards import keyboards_by_rank
 from enums.ranks import Rank
 from enums.steps import Step
+from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, Interest, Achievement, LocalGroup
 
 
@@ -97,8 +98,16 @@ class ManageSomethingDataInput(DataInput, ABC):
         new_name = message.text
         if 'отмена' in new_name.lower():
             return 'Операция успешно отменена'
-        return controller.manage_something_model(user, self.from_step, self.name, self.model, self.model_column,
-                                                 new_name, self._lambda, self.removing)
+        try:
+            controller.manage_something_model(self.model, self.model_column,
+                                              new_name, self._lambda, self.removing)
+            return 'Операция успешно выполнена'
+        except NotFoundObjectError:
+            user.step = self.from_step
+            return 'Такого объекта нет. Попробуйте снова или напишите \'отмена\''
+        except ObjectAlreadyCreatedError:
+            user.step = self.from_step
+            return f'Уже существует {self.name.lower()} с данным названием. Попробуйте снова или напишите \'отмена\''
 
 
 class FeedbackToEventInput(DataInput, ABC):

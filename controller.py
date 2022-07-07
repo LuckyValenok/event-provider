@@ -1,7 +1,6 @@
 import os
 import random
 import string
-from typing import List
 
 from PIL.Image import Image
 from dostoevsky.models import FastTextSocialNetworkModel
@@ -16,7 +15,8 @@ from enums.ranks import Rank
 from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
-from models import User, EventUsers, Achievement, LocalGroup, Interest, Event, EventEditors
+from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
+from models import User, EventUsers, Event, EventEditors
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
 
@@ -35,23 +35,18 @@ def get_code_from_photo(file_name):
 class Controller:
     db_session = DBSession(sessionmaker(bind=create_engine(f'sqlite:///{config.DATABASE_NAME}', echo=True))())
 
-    def manage_something_model(self, user, from_step, object_name, model, model_column, new_name,
-                               _lambda_creating_object, removing) -> str:
+    def manage_something_model(self, model, model_column, new_name, _lambda_creating_object, removing):
         if removing:
             try:
                 self.db_session.delete_model(self.get_entity_by_model_with_name(model, model_column, new_name))
             except NoResultFound:
-                user.step = from_step
-                return 'Такого объекта нет. Попробуйте снова или напишите \'отмена\''
+                raise NotFoundObjectError
         else:
             try:
                 self.get_entity_by_model_with_name(model, model_column, new_name)
-                user.step = from_step
-                return f'Уже существует {object_name.lower()} с данным названием. Попробуйте снова или напишите \'отмена\''
+                raise ObjectAlreadyCreatedError
             except NoResultFound:
                 self.db_session.add_model(_lambda_creating_object(new_name))
-
-        return 'Операция успешно выполнена'
 
     def create_event(self, name, creator):
         event = Event(name=name, status=StatusEvent.UNFINISHED)
@@ -67,24 +62,6 @@ class Controller:
     def has_user_in_event(self, ev_id, uid: int) -> bool:
         return self.db_session.query(EventUsers).filter(EventUsers.user_id == uid,
                                                         EventUsers.event_id == ev_id).one_or_none() is not None
-
-    def get_achievement_by_id(self, aid: int) -> Achievement:
-        return self.db_session.query(Achievement).filter(Achievement.id == aid).one()
-
-    def get_achievements(self) -> List[Achievement]:
-        return self.db_session.query(Achievement).all()
-
-    def get_group_by_id(self, gid: int) -> LocalGroup:
-        return self.db_session.query(LocalGroup).filter(LocalGroup.id == gid).one()
-
-    def get_groups(self) -> List[LocalGroup]:
-        return self.db_session.query(LocalGroup).all()
-
-    def get_interest_by_id(self, iid: int) -> Interest:
-        return self.db_session.query(Interest).filter(Interest.id == iid).one()
-
-    def get_interests(self) -> List[Interest]:
-        return self.db_session.query(Interest).all()
 
     def get_event_by_id(self, eid: int) -> Event:
         return self.db_session.query(Event).filter(Event.id == eid).one()
@@ -143,10 +120,10 @@ class Controller:
 
         return messages, neutral_list, negative_list, positive_list
 
-    def get_model_by_id(self, model, mid):
+    def get_entity_by_model_id(self, model, mid):
         return self.db_session.query(model).filter(self.model.id == mid).one()
 
-    def get_models(self, model):
+    def get_entities_by_model(self, model):
         return self.db_session.query(model).all()
 
     def add_new_user(self, uid):

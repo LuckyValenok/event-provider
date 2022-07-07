@@ -128,7 +128,7 @@ class ManageUserAttachmentCallback(Callback, ABC):
         else:
             try:
                 eid = int(query.data.split('_')[-1])
-                entity = controller.get_model_by_id(self.model, eid)
+                entity = controller.get_entity_by_model_id(self.model, eid)
                 self._lambda(user, entity, not de_attach)
                 controller.save()
 

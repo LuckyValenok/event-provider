@@ -102,7 +102,7 @@ class ManageSomethingCommand(Command, ABC):
         self.model = model
 
     async def execute(self, controller: Controller, user: User, message: Message):
-        entities = controller.get_models(self.model)
+        entities = controller.get_entities_by_model(self.model)
         keyboard = InlineKeyboardMarkup()
         keyboard.row(InlineKeyboardButton('Добавить', callback_data='add_' + self.model.__tablename__))
         if len(entities) != 0:
