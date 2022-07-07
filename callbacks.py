@@ -4,6 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from controller import Controller
+from data.keyboards import change_user_data_keyboard
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
@@ -29,6 +30,42 @@ class UnknownCallback(Callback, ABC):
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return True
+
+
+class ChangeDataInUserCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        name = None
+
+        _type = query.data.split('_')[-1]
+        if _type in 'user':
+            await query.message.answer('Пожалуйста, выберите, что хотите изменить',
+                                       reply_markup=change_user_data_keyboard)
+            await query.message.delete()
+            return
+        elif _type in 'firstname':
+            user.step = Step.FIRST_NAME_ONLY
+            name = 'имя'
+        elif _type in 'middlename':
+            user.step = Step.MIDDLE_NAME_ONLY
+            name = 'отчество'
+        elif _type in 'lastname':
+            user.step = Step.LAST_NAME_ONLY
+            name = 'фамилию'
+        elif _type in 'phone':
+            user.step = Step.PHONE_ONLY
+            name = 'номер телефона'
+        elif _type in 'email':
+            user.step = Step.EMAIL_ONLY
+            name = 'почту'
+
+        controller.save()
+        await query.message.answer(f'Пожалуйста, введите {name}')
+        await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('change_user')
 
 
 class ManageSomethingCallback(Callback, ABC):
@@ -246,7 +283,7 @@ callbacks = [TakePartCallback(),
              UserFeedbackCallback(),
              CancelEventCallback(),
              MarkPresentCallback(),
-             ManageSomethingCallback(None, User, 'change', Step.FIRST_NAME, 'Напиши свое имя'),
+             ChangeDataInUserCallback(),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
                                           lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
              ManageUserAttachmentCallback('Группы', 'Групп', LocalGroup, UserGroups, UserGroups.group_id,

@@ -24,6 +24,7 @@ class DataInput(ABC):
         pass
 
     async def input(self, controller: Controller, user: User, message: Message):
+        user.previous_step = user.step
         user.step = self.to_step
         text = await self.abstract_input(controller, user, message)
 
@@ -33,19 +34,26 @@ class DataInput(ABC):
         await message.answer(text, reply_markup=reply_markup)
         controller.save()
 
-    def can_input(self, user, message) -> bool:
-        return message.text is not None
+    def can_input(self, user: User, message: Message) -> bool:
+        return message.text is not None and user.step == self.from_step
 
 
 class UserDataInput(DataInput, ABC):
-    def __init__(self, from_step, to_step, _lambda, next_message):
+    def __init__(self, from_step, second_from_step, to_step, _lambda, next_message):
         super().__init__(from_step, to_step)
+        self.second_from_step = second_from_step
         self._lambda = _lambda
         self.next_message = next_message
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         self._lambda(user, message.text)
+        if str(user.previous_step).endswith('ONLY'):
+            user.step = Step.NONE
+            return 'Операция успешно выполнена'
         return self.next_message
+
+    def can_input(self, user: User, message: Message) -> bool:
+        return message.text is not None and (user.step == self.from_step or user.step == self.second_from_step)
 
 
 class AppointAsInput(DataInput, ABC):
@@ -147,20 +155,21 @@ class MarkPresentInput(DataInput, ABC):
             return f'Произошла ошибка ({e.code}). Попробуйте снова или напишите \'отмена\''
 
     def can_input(self, user, message: Message) -> bool:
-        return message.text is not None or len(message.photo) != 0
+        return (message.text is not None or len(message.photo) != 0) and user.step == self.from_step
 
 
 data_inputs = [
-    UserDataInput(Step.FIRST_NAME, Step.MIDDLE_NAME, lambda u, t: u.set_first_name(t), 'Теперь введите отчество'),
-    UserDataInput(Step.MIDDLE_NAME, Step.LAST_NAME, lambda u, t: u.set_middle_name(t), 'Теперь введите фамилию'),
-    UserDataInput(Step.LAST_NAME, Step.PHONE, lambda u, t: u.set_last_name(t),
+    UserDataInput(Step.FIRST_NAME, Step.FIRST_NAME_ONLY, Step.MIDDLE_NAME, lambda u, t: u.set_first_name(t), 'Теперь введите отчество'),
+    UserDataInput(Step.MIDDLE_NAME, Step.MIDDLE_NAME_ONLY, Step.LAST_NAME, lambda u, t: u.set_middle_name(t), 'Теперь введите фамилию'),
+    UserDataInput(Step.LAST_NAME, Step.LAST_NAME_ONLY, Step.PHONE, lambda u, t: u.set_last_name(t),
                   'Пожалуйста, введите ваш номер телефона'),
-    UserDataInput(Step.PHONE, Step.EMAIL, lambda u, t: u.set_phone(t), 'Остался последний шаг! Введите e-mail'),
-    UserDataInput(Step.EMAIL, Step.NONE, lambda u, t: u.set_email(t), 'Вы успешно авторизованы'),
+    UserDataInput(Step.PHONE, Step.PHONE_ONLY, Step.EMAIL, lambda u, t: u.set_phone(t), 'Остался последний шаг! Введите e-mail'),
+    UserDataInput(Step.EMAIL, Step.EMAIL_ONLY, Step.NONE, lambda u, t: u.set_email(t), 'Вы успешно авторизованы'),
     EventNameInput(),
     FeedbackToEventInput(),
     MarkPresentInput(),
     AppointAsInput(Step.NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
+    AppointAsInput(Step.NEW_MODER_ID, Step.NONE, Rank.MODER, 'модератором'),
     ManageSomethingDataInput(Step.INTEREST_NAME_FOR_ADD, Step.NONE, 'Интерес', Interest, Interest.name,
                              lambda n: Interest(name=n)),
     ManageSomethingDataInput(Step.INTEREST_NAME_FOR_REMOVE, Step.NONE, 'Интерес', Interest,
@@ -177,6 +186,6 @@ data_inputs = [
 
 def get_data_input(user, message):
     for data_input in data_inputs:
-        if user.step == data_input.from_step and data_input.can_input(user, message):
+        if data_input.can_input(user, message):
             return data_input
     return None

@@ -144,6 +144,7 @@ commands = [GetMyEventsCommand(),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),
             AddSomethingCommand(Rank.ADMIN, Step.NEW_ORGANIZER_ID, 'организатора', 'ID'),
+            AddSomethingCommand(Rank.ORGANIZER, Step.NEW_MODER_ID, 'модератора', 'ID'),
             AddSomethingCommand(Rank.ORGANIZER, Step.NEW_EVENT_NAME, 'мероприятие', 'название')]
 unknown_command = UnknownCommand()
 

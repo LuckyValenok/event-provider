@@ -9,7 +9,7 @@ keyboards_by_rank = {
     Rank.MODER: ReplyKeyboardMarkup(resize_keyboard=True)
         .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
     Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-        .add('Добавить мероприятие', 'Мои мероприятия'),
+        .add('Добавить мероприятие', 'Мои мероприятия', 'Добавить модератора'),
     Rank.ADMIN: ReplyKeyboardMarkup(resize_keyboard=True)
         .add('Интересы', 'Группы', 'Достижения', 'Добавить организатора')
 }
@@ -41,3 +41,10 @@ profile_inline_keyboard = InlineKeyboardMarkup() \
          InlineKeyboardButton('Удалить группу', callback_data='deatt_local_group')) \
     .row(InlineKeyboardButton('Добавить интерес', callback_data='att_interest'),
          InlineKeyboardButton('Удалить интерес', callback_data='deatt_interest'))
+
+change_user_data_keyboard = InlineKeyboardMarkup() \
+    .row(InlineKeyboardButton('Имя', callback_data='change_user_firstname'),
+         InlineKeyboardButton('Отчество', callback_data='change_user_middlename'),
+         InlineKeyboardButton('Фамилию', callback_data='change_user_lastname')) \
+    .row(InlineKeyboardButton('Телефон', callback_data='change_user_phone'),
+         InlineKeyboardButton('Почту', callback_data='change_user_email'))
