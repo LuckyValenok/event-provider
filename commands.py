@@ -137,7 +137,6 @@ class UnknownCommand(Command, ABC):
         return True
 
 
-# UnknownCommand нужно оставлять последней
 commands = [GetMyEventsCommand(),
             GetAllEventsCommand(),
             GetMyProfileCommand(),
