@@ -17,7 +17,8 @@ keyboards_by_rank = {
 keyboards_by_status_event_and_by_rank = {
     StatusEvent.UNFINISHED: {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()
-            .add(InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}")),
+            .add(InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}_ev")),
+
         Rank.USER: lambda e: InlineKeyboardMarkup()
             .add(InlineKeyboardButton('Отменить заявку на участие', callback_data=f"ecan_{e.id}")),
         Rank.MODER: lambda e: InlineKeyboardMarkup()
@@ -48,3 +49,9 @@ change_user_data_keyboard = InlineKeyboardMarkup() \
          InlineKeyboardButton('Фамилию', callback_data='change_user_lastname')) \
     .row(InlineKeyboardButton('Телефон', callback_data='change_user_phone'),
          InlineKeyboardButton('Почту', callback_data='change_user_email'))
+
+change_event_data_keyboard = InlineKeyboardMarkup() \
+    .row(InlineKeyboardButton('Название', callback_data='ech_change_event_ename'),
+         InlineKeyboardButton('Описание', callback_data='ech_change_event_edescription'),
+         InlineKeyboardButton('Дата', callback_data='ech_change_event_edata')) \
+    .row(InlineKeyboardButton('Локация', callback_data='ech_change_event_elocation'))

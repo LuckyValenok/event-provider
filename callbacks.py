@@ -4,7 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from controller import Controller
-from data.keyboards import change_user_data_keyboard
+from data.keyboards import change_user_data_keyboard, change_event_data_keyboard
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
@@ -30,6 +30,39 @@ class UnknownCallback(Callback, ABC):
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return True
+
+
+class ChangeDataInEventCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        name = None
+
+        _type = query.data.split('_')[-1]
+        if _type in 'ev':
+            await query.message.answer('Пожалуйста, выберите параметр, который Вы хотите изменить.',
+                                       reply_markup=change_event_data_keyboard)
+            await query.message.delete()
+            return
+        elif _type in 'ename':
+            user.step = Step.EVENT_NAME_ONLY_EV
+            name = 'название ивента'
+        elif _type in 'edescription':
+            user.step = Step.DESCRIPTION_ONLY_EV
+            name = 'описание'
+        elif _type in 'edate':
+            user.step = Step.DATE_ONLY_EV
+            name = 'дату'
+        elif _type in 'elocation':
+            user.step = Step.LOCATION_ONLY_EV
+            name = 'локацию'
+
+        controller.save()
+        await query.message.answer(f'Пожалуйста, введите {name}')
+        await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('ech_')
 
 
 class ChangeDataInUserCallback(Callback, ABC):
@@ -302,6 +335,7 @@ callbacks = [TakePartCallback(),
                                      'Напишите название группы для удаления'),
              GetAttendentStatisticsCallback(),
              FeedbackStatisticsCallback(),
+             ChangeDataInEventCallback(),
              UnknownCallback()]
 
 

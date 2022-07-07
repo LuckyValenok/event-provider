@@ -1,8 +1,10 @@
 from sqlalchemy import Column, VARCHAR, ForeignKey, Integer, TIMESTAMP, Float, Enum
 from sqlalchemy.orm import relation
+from aiogram.types import venue
 
 from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
+from enums.steps import Step
 from . import User, Interest, LocalGroup
 from .basemodel import BaseModel
 
@@ -60,6 +62,7 @@ class Event(BaseModel):
     lat = Column(Float, nullable=True)
     lng = Column(Float, nullable=True)
     status = Column(Enum(StatusEvent), nullable=False, default=StatusEvent.UNFINISHED)
+    step = Column(Enum(Step), nullable=False, default=Step.NONE)
 
     users = relation(
         User,
@@ -73,3 +76,15 @@ class Event(BaseModel):
         LocalGroup,
         secondary=EventGroups.__tablename__
     )
+    def set_event_name(self, name):
+        self.name = name
+
+    def set_event_description(self, name):
+        self.description = name
+
+    def set_event_date(self, name):
+        self.date = name
+
+    def set_event_location(self, venue):
+        self.lat = venue.location.latitude,
+        self.lng = venue.location.longitude

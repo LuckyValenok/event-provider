@@ -56,6 +56,24 @@ class UserDataInput(DataInput, ABC):
         return message.text is not None and (user.step == self.from_step or user.step == self.second_from_step)
 
 
+class EventDataInput(DataInput, ABC):
+    def __init__(self, from_step, second_from_step, to_step, _lambda, next_message):
+        super().__init__(from_step, to_step)
+        self.second_from_step = second_from_step
+        self._lambda = _lambda
+        self.next_message = next_message
+
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        self._lambda(user, message.text)
+        if str(user.previous_step).endswith('ONLY_EV'):
+            user.step = Step.NONE
+            return 'Операция успешно выполнена'
+        return self.next_message
+
+    def can_input(self, user: User, message: Message) -> bool:
+        return message.text is not None and (user.step == self.from_step or user.step == self.second_from_step)
+
+
 class AppointAsInput(DataInput, ABC):
     rank: Rank
     name: str
@@ -165,11 +183,18 @@ data_inputs = [
                   'Пожалуйста, введите ваш номер телефона'),
     UserDataInput(Step.PHONE, Step.PHONE_ONLY, Step.EMAIL, lambda u, t: u.set_phone(t), 'Остался последний шаг! Введите e-mail'),
     UserDataInput(Step.EMAIL, Step.EMAIL_ONLY, Step.NONE, lambda u, t: u.set_email(t), 'Вы успешно авторизованы'),
+
+    EventDataInput(Step.NEW_EVENT_NAME, Step.EVENT_NAME_ONLY_EV, Step.DESCRIPTION, lambda e, t: e.set_event_name(t), 'Теперь введите описание'),
+    EventDataInput(Step.DESCRIPTION, Step.DESCRIPTION_ONLY_EV, Step.DATE_EV, lambda e, t: e.set_event_description(t), 'Теперь введите дату'),
+    EventDataInput(Step.DATE_EV, Step.LOCATION_ONLY_EV, Step.LOCATION, lambda e, t: e.set_event_location(t),
+                  'Теперь отправьте геолокацию'),
+
     EventNameInput(),
     FeedbackToEventInput(),
     MarkPresentInput(),
     AppointAsInput(Step.NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
     AppointAsInput(Step.NEW_MODER_ID, Step.NONE, Rank.MODER, 'модератором'),
+
     ManageSomethingDataInput(Step.INTEREST_NAME_FOR_ADD, Step.NONE, 'Интерес', Interest, Interest.name,
                              lambda n: Interest(name=n)),
     ManageSomethingDataInput(Step.INTEREST_NAME_FOR_REMOVE, Step.NONE, 'Интерес', Interest,
