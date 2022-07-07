@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from io import BytesIO
 
-import qrcode
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy.exc import NoResultFound
 
@@ -75,20 +73,14 @@ class TakePartCallback(Callback, ABC):
 
                 await query.message.answer('Поздравляем, Вы принимаете участие в мероприятии!')
 
-                code = controller.get_new_code()
-
-                controller.add_code(event, user, code)
-
-                img = qrcode.make(code)
-
-                output = BytesIO()
-                img.save(output, "PNG")
-                output.seek(0)
+                code, output = controller.generate_qr_code(event, user)
 
                 await query.message.answer(f'Ваш код, который вы должны предоставить модератору мероприятия: {code}\n'
                                            f'Или QR-код:')
-                await query.message.answer_photo(output)
-                output.close()
+                try:
+                    await query.message.answer_photo(output)
+                finally:
+                    output.close()
 
                 controller.save()
         except NoResultFound:

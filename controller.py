@@ -1,7 +1,9 @@
 import os
 import random
 import string
+from io import BytesIO
 
+import qrcode
 from PIL.Image import Image
 from dostoevsky.models import FastTextSocialNetworkModel
 from dostoevsky.tokenization import RegexTokenizer
@@ -47,6 +49,19 @@ class Controller:
                 raise ObjectAlreadyCreatedError
             except NoResultFound:
                 self.db_session.add_model(_lambda_creating_object(new_name))
+
+    def generate_qr_code(self, event, user) -> (str, BytesIO):
+        code = self.get_new_code()
+
+        self.add_code(event, user, code)
+
+        img = qrcode.make(code)
+
+        output = BytesIO()
+        img.save(output, "PNG")
+        output.seek(0)
+
+        return code, output
 
     def create_event(self, name, creator):
         event = Event(name=name, status=StatusEvent.UNFINISHED)
