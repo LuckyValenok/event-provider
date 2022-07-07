@@ -136,7 +136,7 @@ class Controller:
         return messages, neutral_list, negative_list, positive_list
 
     def get_entity_by_model_id(self, model, mid):
-        return self.db_session.query(model).filter(self.model.id == mid).one()
+        return self.db_session.query(model).filter(model.id == mid).one()
 
     def get_entities_by_model(self, model):
         return self.db_session.query(model).all()
