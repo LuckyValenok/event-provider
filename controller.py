@@ -87,7 +87,6 @@ class Controller:
     def get_events_not_participate_user(self, uid: int):
         return self.db_session.query(Event).filter(~Event.users.any(User.id == uid)).all()
 
-    # Вариант с подсчётом количества пришедших
     def get_count_visited(self, eid: int) -> int:
         return len(self.db_session.query(Event).filter(
             and_(Event.id == eid, EventUsers.status_attendion == StatusAttendion.ARRIVED,
@@ -95,6 +94,10 @@ class Controller:
 
     def get_editor_event(self, uid: int) -> EventEditors:
         return self.db_session.query(EventEditors).filter(EventEditors.user_id == uid).one()
+
+    def get_event_by_editor(self, uid: int) -> Event:
+        event_id = self.db_session.query(EventEditors).filter(EventEditors.user_id == uid).one().event_id
+        return self.get_event_by_id(event_id)
 
     def get_new_code(self) -> str:
         code = None

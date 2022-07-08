@@ -8,7 +8,7 @@ from data.keyboards import change_user_data_keyboard, change_event_data_keyboard
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
-from models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
+from models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventEditors
 from models.basemodel import BaseModel
 
 
@@ -39,30 +39,34 @@ class ChangeDataInEventCallback(Callback, ABC):
         name = None
 
         _type = query.data.split('_')[-1]
-        if _type in 'ev':
+        try:
+            eid = int(_type)
+            controller.db_session.add_model(EventEditors(event_id=eid, user_id=user.id))
+            controller.save()
+
             await query.message.answer('Пожалуйста, выберите параметр, который Вы хотите изменить.',
                                        reply_markup=change_event_data_keyboard)
             await query.message.delete()
-            return
-        elif _type in 'ename':
-            user.step = Step.EVENT_NAME_ONLY_EV
-            name = 'название ивента'
-        elif _type in 'edescription':
-            user.step = Step.DESCRIPTION_ONLY_EV
-            name = 'описание'
-        elif _type in 'edate':
-            user.step = Step.DATE_ONLY_EV
-            name = 'дату'
-        elif _type in 'elocation':
-            user.step = Step.LOCATION_ONLY_EV
-            name = 'локацию'
+        except ValueError:
+            if _type in 'name':
+                user.step = Step.EVENT_NAME
+                name = 'название ивента'
+            elif _type in 'description':
+                user.step = Step.EVENT_DESCRIPTION
+                name = 'описание'
+            elif _type in 'date':
+                user.step = Step.EVENT_DATE
+                name = 'дату'
+            elif _type in 'location':
+                user.step = Step.EVENT_LOCATION
+                name = 'локацию'
 
-        controller.save()
-        await query.message.answer(f'Пожалуйста, введите {name}')
-        await query.message.delete()
+            controller.save()
+            await query.message.answer(f'Пожалуйста, введите {name}')
+            await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
-        return query.data.startswith('ech_')
+        return query.data.startswith('ech_') and user.rank == Rank.ORGANIZER
 
 
 class ChangeDataInUserCallback(Callback, ABC):
