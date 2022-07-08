@@ -189,5 +189,10 @@ class Controller:
     def save(self):
         self.db_session.commit_session()
 
-    def get_friendlist(self, user):
-        return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == user.id, UserFriend.friend_id == User.id).with_entities(User.first_name, User.middle_name, User.last_name).all()
+    def get_friend_list(self, user):
+        return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == user.id,
+                                                              UserFriend.friend_id == User.id) \
+            .with_entities(User.first_name, User.middle_name, User.last_name).all()
+
+    def add_friend(self, uid, fid):
+        self.db_session.add_model(UserFriend(user_id=uid, friend_id=fid))

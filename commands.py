@@ -22,15 +22,24 @@ class Command(ABC):
 
 class GetFriendListCommand(Command, ABC):
     async def execute(self, controller: Controller, user: User, message: Message):
-        friendlist = controller.get_friendlist(user)
-        if(len(friendlist) == 0 ):
+        friendlist = controller.get_friend_list(user)
+        if (len(friendlist) == 0):
             await message.answer("У Вас пока нет друзей.")
         for friend in friendlist:
             await message.answer(friend[0] + " " + friend[1] + " " + friend[2])
 
+    def can_execute(self, user: User, message: Message) -> bool:
+        return (user.rank == Rank.USER and 'мои друзья' in message.text.lower())
+
+
+class AddFriendCommand(Command, ABC):
+    async def execute(self, controller: Controller, user: User, message: Message):
+        user.step = Step.ADD_FRIEND
+        await message.answer("Введите телеграмм-id друга:")
+
 
     def can_execute(self, user: User, message: Message) -> bool:
-        return (user.rank == Rank.USER  and 'мои друзья' in message.text.lower())
+        return (user.rank == Rank.USER and 'добавить друга' in message.text.lower())
 
 
 class GetMyEventsCommand(Command, ABC):
@@ -148,6 +157,7 @@ commands = [GetMyEventsCommand(),
             GetAllEventsCommand(),
             GetMyProfileCommand(),
             GetFriendListCommand(),
+            AddFriendCommand(),
             ManageSomethingCommand('Интересы', Interest),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),

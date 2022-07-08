@@ -82,6 +82,18 @@ class EventDataInput(DataInput, ABC):
                 message.text is not None and user.step == self.from_step)
 
 
+class AddFriendInput(DataInput, ABC):
+    def __init__(self, from_step):
+        super().__init__(from_step, Step.NONE)
+
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        controller.add_friend(user.id, message.text)
+        return 'Вы успешно добавили нового друга!'
+
+    def can_input(self, user: User, message: Message) -> bool:
+        return (user.step == Step.ADD_FRIEND and message.text is not None)
+
+
 class AppointAsInput(DataInput, ABC):
     rank: Rank
     name: str
@@ -203,7 +215,8 @@ data_inputs = [
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_ADD, Step.NONE, 'Группа', LocalGroup, LocalGroup.name,
                              lambda n: LocalGroup(name=n)),
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_REMOVE, Step.NONE, 'Группа', LocalGroup,
-                             LocalGroup.name, None)]
+                             LocalGroup.name, None),
+    AddFriendInput(Step.ADD_FRIEND)]
 
 
 def get_data_input(user, message):
