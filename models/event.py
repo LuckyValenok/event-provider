@@ -3,7 +3,7 @@ from sqlalchemy.orm import relation
 
 from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
-from . import User, Interest, LocalGroup
+from models import User, Interest, LocalGroup
 from .basemodel import BaseModel
 
 
@@ -73,3 +73,16 @@ class Event(BaseModel):
         LocalGroup,
         secondary=EventGroups.__tablename__
     )
+
+    def set_name(self, name):
+        self.name = name
+
+    def set_description(self, description):
+        self.description = description
+
+    def set_date(self, date):
+        self.date = date
+
+    def set_location(self, location):
+        self.lat = location.latitude
+        self.lng = location.longitude

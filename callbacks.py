@@ -4,11 +4,11 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from controller import Controller
-from data.keyboards import change_user_data_keyboard
+from data.keyboards import change_user_data_keyboard, change_event_data_keyboard
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
-from models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups
+from models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventEditors
 from models.basemodel import BaseModel
 
 
@@ -30,6 +30,43 @@ class UnknownCallback(Callback, ABC):
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return True
+
+
+class ChangeDataInEventCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        name = None
+
+        _type = query.data.split('_')[-1]
+        try:
+            eid = int(_type)
+            controller.db_session.add_model(EventEditors(event_id=eid, user_id=user.id))
+            controller.save()
+
+            await query.message.answer('Пожалуйста, выберите параметр, который Вы хотите изменить.',
+                                       reply_markup=change_event_data_keyboard)
+            await query.message.delete()
+        except ValueError:
+            if _type in 'name':
+                user.step = Step.EVENT_NAME
+                name = 'название ивента'
+            elif _type in 'description':
+                user.step = Step.EVENT_DESCRIPTION
+                name = 'описание'
+            elif _type in 'date':
+                user.step = Step.EVENT_DATE
+                name = 'дату'
+            elif _type in 'location':
+                user.step = Step.EVENT_LOCATION
+                name = 'локацию'
+
+            controller.save()
+            await query.message.answer(f'Пожалуйста, введите {name}')
+            await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('ech_') and user.rank == Rank.ORGANIZER
 
 
 class ChangeDataInUserCallback(Callback, ABC):
@@ -302,6 +339,7 @@ callbacks = [TakePartCallback(),
                                      'Напишите название группы для удаления'),
              GetAttendentStatisticsCallback(),
              FeedbackStatisticsCallback(),
+             ChangeDataInEventCallback(),
              UnknownCallback()]
 
 

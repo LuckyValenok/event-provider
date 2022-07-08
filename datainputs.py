@@ -56,6 +56,31 @@ class UserDataInput(DataInput, ABC):
         return message.text is not None and (user.step == self.from_step or user.step == self.second_from_step)
 
 
+class EventDataInput(DataInput, ABC):
+    def __init__(self, from_step, _lambda):
+        super().__init__(from_step, Step.NONE)
+        self._lambda = _lambda
+
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        try:
+            event_editor = controller.get_editor_event(user.id)
+            self._lambda(controller.get_event_by_id(event_editor.event_id), message)
+
+            controller.db_session.delete_model(event_editor)
+            controller.save()
+            return 'Операция успешно выполнена'
+        except NoResultFound:
+            if self.from_step == Step.EVENT_NAME:
+                controller.create_event(message.text, user)
+                return 'Мероприятие успешно создано. Теперь вы можете перейти в его настройки и указать дату, ' \
+                       'описание и местоположение '
+            return 'Мероприятие не найдено'
+
+    def can_input(self, user: User, message: Message) -> bool:
+        return (message.location is not None and user.step == Step.EVENT_LOCATION and user.step == self.from_step) or (
+                message.text is not None and user.step == self.from_step)
+
+
 class AppointAsInput(DataInput, ABC):
     rank: Rank
     name: str
@@ -81,16 +106,6 @@ class AppointAsInput(DataInput, ABC):
         except ValueError:
             user.step = self.from_step
             return f'{text} - не число. Попробуйте снова или напишите \'отмена\''
-
-
-class EventNameInput(DataInput, ABC):
-    def __init__(self):
-        super().__init__(Step.NEW_EVENT_NAME, Step.NONE)
-
-    async def abstract_input(self, controller: Controller, user: User, message: Message):
-        controller.create_event(message.text, user)
-        return 'Мероприятие успешно создано. Теперь вы можете перейти в его настройки и указать дату, описание и ' \
-               'местоположение '
 
 
 class ManageSomethingDataInput(DataInput, ABC):
@@ -159,13 +174,19 @@ class MarkPresentInput(DataInput, ABC):
 
 
 data_inputs = [
-    UserDataInput(Step.FIRST_NAME, Step.FIRST_NAME_ONLY, Step.MIDDLE_NAME, lambda u, t: u.set_first_name(t), 'Теперь введите отчество'),
-    UserDataInput(Step.MIDDLE_NAME, Step.MIDDLE_NAME_ONLY, Step.LAST_NAME, lambda u, t: u.set_middle_name(t), 'Теперь введите фамилию'),
+    UserDataInput(Step.FIRST_NAME, Step.FIRST_NAME_ONLY, Step.MIDDLE_NAME, lambda u, t: u.set_first_name(t),
+                  'Теперь введите отчество'),
+    UserDataInput(Step.MIDDLE_NAME, Step.MIDDLE_NAME_ONLY, Step.LAST_NAME, lambda u, t: u.set_middle_name(t),
+                  'Теперь введите фамилию'),
     UserDataInput(Step.LAST_NAME, Step.LAST_NAME_ONLY, Step.PHONE, lambda u, t: u.set_last_name(t),
                   'Пожалуйста, введите ваш номер телефона'),
-    UserDataInput(Step.PHONE, Step.PHONE_ONLY, Step.EMAIL, lambda u, t: u.set_phone(t), 'Остался последний шаг! Введите e-mail'),
+    UserDataInput(Step.PHONE, Step.PHONE_ONLY, Step.EMAIL, lambda u, t: u.set_phone(t),
+                  'Остался последний шаг! Введите e-mail'),
     UserDataInput(Step.EMAIL, Step.EMAIL_ONLY, Step.NONE, lambda u, t: u.set_email(t), 'Вы успешно авторизованы'),
-    EventNameInput(),
+    EventDataInput(Step.EVENT_NAME, lambda e, m: e.set_name(m.text)),
+    EventDataInput(Step.EVENT_DESCRIPTION, lambda e, m: e.set_description(m.text)),
+    EventDataInput(Step.EVENT_LOCATION, lambda e, m: e.set_location(m.location)),
+    EventDataInput(Step.EVENT_DATE, lambda e, m: e.set_date(m.text)),
     FeedbackToEventInput(),
     MarkPresentInput(),
     AppointAsInput(Step.NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),

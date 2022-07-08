@@ -48,3 +48,9 @@ change_user_data_keyboard = InlineKeyboardMarkup() \
          InlineKeyboardButton('Фамилию', callback_data='change_user_lastname')) \
     .row(InlineKeyboardButton('Телефон', callback_data='change_user_phone'),
          InlineKeyboardButton('Почту', callback_data='change_user_email'))
+
+change_event_data_keyboard = InlineKeyboardMarkup() \
+    .row(InlineKeyboardButton('Название', callback_data='ech_name'),
+         InlineKeyboardButton('Описание', callback_data='ech_description'),
+         InlineKeyboardButton('Дата', callback_data='ech_date')) \
+    .row(InlineKeyboardButton('Локация', callback_data='ech_location'))
