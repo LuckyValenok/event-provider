@@ -21,6 +21,7 @@ from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, EventUsers, Event, EventEditors
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
+from models.user import UserFriend
 
 
 def get_code_from_photo(file_name):
@@ -187,3 +188,6 @@ class Controller:
 
     def save(self):
         self.db_session.commit_session()
+
+    def get_friendlist(self, user):
+        return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == user.id, UserFriend.friend_id == User.id).with_entities(User.first_name, User.middle_name, User.last_name).all()

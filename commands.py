@@ -20,6 +20,19 @@ class Command(ABC):
         pass
 
 
+class GetFriendListCommand(Command, ABC):
+    async def execute(self, controller: Controller, user: User, message: Message):
+        friendlist = controller.get_friendlist(user)
+        if(len(friendlist) == 0 ):
+            await message.answer("У Вас пока нет друзей.")
+        for friend in friendlist:
+            await message.answer(friend[0] + " " + friend[1] + " " + friend[2])
+
+
+    def can_execute(self, user: User, message: Message) -> bool:
+        return (user.rank == Rank.USER  and 'мои друзья' in message.text.lower())
+
+
 class GetMyEventsCommand(Command, ABC):
     async def execute(self, controller: Controller, user: User, message: Message):
         events = controller.get_events_by_user(user.id)
@@ -134,6 +147,7 @@ class UnknownCommand(Command, ABC):
 commands = [GetMyEventsCommand(),
             GetAllEventsCommand(),
             GetMyProfileCommand(),
+            GetFriendListCommand(),
             ManageSomethingCommand('Интересы', Interest),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),

@@ -5,7 +5,7 @@ from enums.status_event import StatusEvent
 
 keyboards_by_rank = {
     Rank.USER: ReplyKeyboardMarkup(resize_keyboard=True)
-        .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
+        .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль', 'Мои друзья'),
     Rank.MODER: ReplyKeyboardMarkup(resize_keyboard=True)
         .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
     Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
