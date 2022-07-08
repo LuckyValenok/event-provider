@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from aiogram.types import Message, ReplyKeyboardRemove
 from sqlalchemy.exc import NoResultFound
@@ -186,7 +187,7 @@ data_inputs = [
     EventDataInput(Step.EVENT_NAME, lambda e, m: e.set_name(m.text)),
     EventDataInput(Step.EVENT_DESCRIPTION, lambda e, m: e.set_description(m.text)),
     EventDataInput(Step.EVENT_LOCATION, lambda e, m: e.set_location(m.location)),
-    EventDataInput(Step.EVENT_DATE, lambda e, m: e.set_date(m.text)),
+    EventDataInput(Step.EVENT_DATE, lambda e, m: e.set_date(datetime.strptime(m.text, "%d.%m.%Y %H:%M"))),
     FeedbackToEventInput(),
     MarkPresentInput(),
     AppointAsInput(Step.NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
