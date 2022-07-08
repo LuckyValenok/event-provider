@@ -4,7 +4,7 @@ import string
 from io import BytesIO
 
 import qrcode
-from PIL.Image import Image
+from PIL import Image
 from dostoevsky.models import FastTextSocialNetworkModel
 from dostoevsky.tokenization import RegexTokenizer
 from pyzbar.pyzbar import decode
@@ -24,14 +24,14 @@ from models.event import EventCodes, EventFeedbacks
 
 
 def get_code_from_photo(file_name):
-    img = Image.open(f'{file_name}.jpg')
+    img = Image.open(f'{file_name}')
     try:
         return decode(img)[-1].data
     except IndexError:
         return None
     finally:
         img.close()
-        os.remove(f'{file_name}.jpg')
+        os.remove(f'{file_name}')
 
 
 class Controller:

@@ -111,7 +111,7 @@ class ManageSomethingCommand(Command, ABC):
 
 class GetMyProfileCommand(Command, ABC):
     async def execute(self, controller: Controller, user: User, message: Message):
-        text = f'🧚{user.first_name} {user.middle_name} {user.last_name}\n' \
+        text = f'🦔{user.first_name} {user.middle_name} {user.last_name}\n' \
                f'├ Номер телефона: {user.phone}\n' \
                f'├ Почта: {user.email}\n' \
                f'├ Ваши группы: {", ".join([group.name for group in user.groups]) if len(user.groups) != 0 else "отсутствуют"}\n' \
