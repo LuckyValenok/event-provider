@@ -10,7 +10,8 @@ from enums.friend_request_status import FriendRequestStatus
 from enums.ranks import Rank
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, Interest, LocalGroup, OrgRateUser
+from models import User, Interest, LocalGroup
+from models.user import OrganizerRateUser
 
 
 class DataInput(ABC):
@@ -114,7 +115,7 @@ class GiveRatingInput(DataInput, ABC):
         uid = controller.get_rate_editor(user.id)
         amount = int(message.text)
         controller.give_rate(uid.user_id, amount)
-        req = controller.db_session.query(OrgRateUser).filter(OrgRateUser.org_id == user.id, OrgRateUser.user_id == uid.user_id).one()
+        req = controller.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == user.id, OrganizerRateUser.user_id == uid.user_id).one()
         controller.db_session.delete_model(req)
         return 'Баллы успешно начислены!'
 

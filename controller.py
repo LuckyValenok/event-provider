@@ -20,10 +20,10 @@ from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, EventUsers, Event, EventEditors, OrgRateUser
+from models import User, EventUsers, Event, EventEditors
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
-from models.user import UserFriends
+from models.user import UserFriends, OrganizerRateUser
 
 
 def get_code_from_photo(file_name):
@@ -247,5 +247,5 @@ class Controller:
         self.db_session.commit_session()
 
     def get_rate_editor(self, oid):
-        return self.db_session.query(OrgRateUser).filter(OrgRateUser.org_id == oid).with_entities(OrgRateUser.user_id)\
+        return self.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == oid).with_entities(OrganizerRateUser.user_id)\
             .one()

@@ -9,8 +9,8 @@ from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
 from models import User, Interest, LocalGroup, UserInterests, UserGroups, EventEditors
-from models.rating import OrgRateUser
 from models.basemodel import BaseModel
+from models.user import OrganizerRateUser
 
 
 class Callback(ABC):
@@ -251,7 +251,7 @@ class GiveRateToUser(Callback, ABC):
 
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         uid = int(query.data.split('_')[-1])
-        controller.db_session.add_model(OrgRateUser(org_id=user.id, user_id=uid))
+        controller.db_session.add_model(OrganizerRateUser(org_id=user.id, user_id=uid))
         user.step = Step.GIVE_RATING
         controller.db_session.commit_session()
 
