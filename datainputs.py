@@ -10,7 +10,7 @@ from enums.friend_request_status import FriendRequestStatus
 from enums.ranks import Rank
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, Interest, LocalGroup
+from models import User, Interest, LocalGroup, OrgRateUser
 
 
 class DataInput(ABC):
@@ -113,7 +113,9 @@ class GiveRatingInput(DataInput, ABC):
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         uid = controller.get_rate_editor(user.id)
         amount = int(message.text)
-        controller.give_rate(uid, amount)
+        controller.give_rate(uid.user_id, amount)
+        req = controller.db_session.query(OrgRateUser).filter(OrgRateUser.org_id == user.id, OrgRateUser.user_id == uid.user_id).one()
+        controller.db_session.delete_model(req)
         return 'Баллы успешно начислены!'
 
     def can_input(self, user: User, message: Message) -> bool:

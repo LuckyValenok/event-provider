@@ -243,7 +243,7 @@ class Controller:
 
     def give_rate(self, uid, amount: int):
         request = self.db_session.query(User).filter(User.id == uid).one()
-        request.rating = amount
+        request.rating += amount
         self.db_session.commit_session()
 
     def get_rate_editor(self, oid):
