@@ -28,3 +28,4 @@ class Step(Enum):
     EVENT_DESCRIPTION = 23,
     EVENT_DATE = 24,
     EVENT_LOCATION = 25,
+    ADD_FRIEND = 26

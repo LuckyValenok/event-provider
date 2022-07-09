@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from controller import Controller
-from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_and_by_rank
+from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_and_by_rank, keyboards_for_friend_request, \
+    keyboards_for_friend_list
 from enums.ranks import Rank
 from enums.steps import Step
 from models import User, Interest, Achievement, LocalGroup
@@ -18,6 +19,44 @@ class Command(ABC):
     @abstractmethod
     def can_execute(self, user: User, message: Message) -> bool:
         pass
+
+
+class GetFriendListCommand(Command, ABC):
+    async def execute(self, controller: Controller, user: User, message: Message):
+        friend_list = controller.get_friend_list(user)
+        if len(friend_list) == 0:
+            await message.answer("У Вас пока нет друзей.")
+        else:
+            for friend in friend_list:
+                keyboard = keyboards_for_friend_list[user.rank](friend)
+                await message.answer(friend[0] + " " + friend[1] + " " + friend[2], reply_markup=keyboard)
+
+    def can_execute(self, user: User, message: Message) -> bool:
+        return user.rank == Rank.USER and 'мои друзья' in message.text.lower()
+
+
+class GetFriendRequestListCommand(Command, ABC):
+    async def execute(self, controller: Controller, user: User, message: Message):
+        requests_list = controller.get_friend_requests(user.id)
+        if len(requests_list) == 0:
+            await message.answer("У Вас пока нет заявок в друзья.")
+        else:
+            for request in requests_list:
+                keyboard = keyboards_for_friend_request[user.rank](request)
+                await message.answer(request[0] + " " + request[1] + " " + request[2] + " хочет добавить Вас в друзья!",
+                                     reply_markup=keyboard)
+
+    def can_execute(self, user: User, message: Message) -> bool:
+        return user.rank == Rank.USER and 'мои заявки в друзья' in message.text.lower()
+
+
+class AddFriendCommand(Command, ABC):
+    async def execute(self, controller: Controller, user: User, message: Message):
+        user.step = Step.ADD_FRIEND
+        await message.answer("Введите телеграмм-id друга:")
+
+    def can_execute(self, user: User, message: Message) -> bool:
+        return user.rank == Rank.USER and 'добавить друга' in message.text.lower()
 
 
 class GetMyEventsCommand(Command, ABC):
@@ -135,6 +174,9 @@ class UnknownCommand(Command, ABC):
 commands = [GetMyEventsCommand(),
             GetAllEventsCommand(),
             GetMyProfileCommand(),
+            GetFriendListCommand(),
+            AddFriendCommand(),
+            GetFriendRequestListCommand(),
             ManageSomethingCommand('Интересы', Interest),
             ManageSomethingCommand('Группы', LocalGroup),
             ManageSomethingCommand('Достижения', Achievement),
