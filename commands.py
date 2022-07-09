@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
-from controller import Controller
+from controller import Controller, generate_image_achievements
 from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_and_by_rank, keyboards_for_friend_request, \
     keyboards_for_friend_list
 from enums.ranks import Rank
@@ -157,7 +157,9 @@ class GetMyProfileCommand(Command, ABC):
                f'├ Ваши группы: {", ".join([group.name for group in user.groups]) if len(user.groups) != 0 else "отсутствуют"}\n' \
                f'└ Ваши интересы {", ".join([interest.name for interest in user.interests]) if len(user.interests) != 0 else "отсутствуют"}'
         await message.answer(text, reply_markup=profile_inline_keyboard)
-        # TODO: ВЫВОД ДОСТИЖЕНИЙ
+        image_achievements = generate_image_achievements(user)
+        if image_achievements is not None:
+            await message.answer_photo(photo=image_achievements, caption='Ваши достижения')
 
     def can_execute(self, user: User, message: Message) -> bool:
         return 'мой профиль' in message.text.lower()

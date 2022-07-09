@@ -1,5 +1,4 @@
 import datetime
-import os
 import random
 import string
 from io import BytesIO
@@ -26,15 +25,49 @@ from models.event import EventCodes, EventFeedbacks
 from models.user import UserFriends
 
 
-def get_code_from_photo(file_name):
-    img = Image.open(f'{file_name}')
+def get_code_from_photo(_bytes: BytesIO):
+    img = Image.open(_bytes)
     try:
         return decode(img)[-1].data.decode("utf-8")
     except IndexError:
         return None
     finally:
         img.close()
-        os.remove(f'{file_name}')
+        _bytes.close()
+
+
+def generate_image_achievements(user: User):
+    achievements = user.achievements
+    size = len(achievements)
+    if size == 0:
+        return None
+    line_size = int(size / 4)
+    if size % 4 != 0:
+        line_size += 1
+    new_image = Image.new('RGB', (size * 200 if line_size == 1 else 800, 200 * line_size), (250, 250, 250))
+    x, y = 0, 0
+    for achievement in user.achievements:
+        _bytes = BytesIO(achievement.image)
+        image = Image.open(_bytes)
+        try:
+            new_image.paste(image, (x, y))
+        finally:
+            _bytes.close()
+            image.close()
+
+        x += 200
+
+        if x / 200 >= 4:
+            y += 200
+            x = 0
+    try:
+        output = BytesIO()
+        new_image.save(output, 'JPEG')
+        output.seek(0)
+        return output
+    finally:
+        new_image.close()
+        output.close()
 
 
 class Controller:

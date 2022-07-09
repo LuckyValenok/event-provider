@@ -174,9 +174,11 @@ class MarkPresentInput(DataInput, ABC):
         else:
             photo = message.photo[-1]
 
-            await photo.download(destination_file=f'{photo.file_id}.jpg')
+            output = BytesIO()
+            await photo.download(destination_file=output)
+            output.seek(0)
 
-            code = get_code_from_photo(f'{photo.file_id}.jpg')
+            code = get_code_from_photo(output)
             if code is None:
                 user.step = Step.VERIFICATION_PRESENT
                 return 'Произошла ошибка при распознавании QR-кода. Попробуйте снова или напишите \'отмена\''
