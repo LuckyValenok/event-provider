@@ -26,7 +26,7 @@ class EventUsers(BaseModel):
 
     event_id = Column(Integer, ForeignKey('event.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
-    status_attendion = Column(Enum(StatusAttendion), nullable=False, default=StatusAttendion.NOT_ARRIVED, index=True)
+    status_attendion = Column(Enum(StatusAttendion), nullable=True, index=True)
 
 
 class EventFeedbacks(BaseModel):
@@ -59,7 +59,7 @@ class Event(BaseModel):
     date = Column(TIMESTAMP, nullable=True)
     lat = Column(Float, nullable=True)
     lng = Column(Float, nullable=True)
-    status = Column(Enum(StatusEvent), nullable=False, default=StatusEvent.UNFINISHED)
+    status = Column(Enum(StatusEvent), nullable=True)
 
     users = relation(
         User,

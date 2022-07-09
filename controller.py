@@ -20,7 +20,7 @@ from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, EventUsers, Event, EventEditors
+from models import User, EventUsers, Event, EventEditors, Achievement
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
 from models.user import UserFriends
@@ -94,9 +94,9 @@ class Controller:
     def get_events_not_participate_user(self, uid: int):
         now = datetime.datetime.now()
         return self.db_session.query(Event).filter(
-            and_(~Event.users.any(User.id == uid), Event.date is not None, Event.date < now,
-                 Event.status == StatusEvent.UNFINISHED, Event.description is not None, Event.lng is not None,
-                 Event.lat is not None)).all()
+            and_(~Event.users.any(User.id == uid), Event.date != None, Event.date < now,
+                 Event.status == StatusEvent.UNFINISHED, Event.description != None, Event.lng != None,
+                 Event.lat != None)).all()
 
     def get_count_visited(self, eid: int) -> int:
         return len(self.db_session.query(User).filter(
@@ -239,3 +239,7 @@ class Controller:
         self.db_session.delete_model(request)
         self.db_session.delete_model(request2)
         self.db_session.commit_session()
+
+    def get_achievement_by_creator(self, user: User) -> Achievement:
+        return self.db_session.query(Achievement).filter(
+            and_(Achievement.creator == user.id, Achievement.image == None)).one()

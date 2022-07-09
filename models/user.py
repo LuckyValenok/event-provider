@@ -48,8 +48,8 @@ class User(BaseModel):
     last_name = Column(VARCHAR(255), nullable=True)
     email = Column(VARCHAR(255), nullable=True, unique=True)
     phone = Column(VARCHAR(255), nullable=True, unique=True)
-    rank = Column(Enum(Rank), nullable=False)
-    step = Column(Enum(Step), nullable=False)
+    rank = Column(Enum(Rank), nullable=True)
+    step = Column(Enum(Step), nullable=True)
 
     achievements = relation(
         Achievement,

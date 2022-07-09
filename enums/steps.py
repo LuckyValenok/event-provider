@@ -9,6 +9,8 @@ class Step(Enum):
     LAST_NAME = 3,
     PHONE = 4,
     EMAIL = 5,
+    ACHIEVEMENT_NAME = 6,
+    ACHIEVEMENT_IMAGE = 11,
     EVENT_NAME = 7,
     NEW_ORGANIZER_ID = 8,
     INTEREST_NAME_FOR_ADD = 9,

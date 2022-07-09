@@ -7,7 +7,7 @@ from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_an
     keyboards_for_friend_list
 from enums.ranks import Rank
 from enums.steps import Step
-from models import User, Interest, Achievement, LocalGroup
+from models import User, Interest, LocalGroup
 from models.basemodel import BaseModel
 
 
@@ -181,7 +181,8 @@ commands = [GetMyEventsCommand(),
             ManageSomethingCommand('Группы', LocalGroup),
             AddSomethingCommand(Rank.ADMIN, Step.NEW_ORGANIZER_ID, 'организатора', 'ID'),
             AddSomethingCommand(Rank.ORGANIZER, Step.NEW_MODER_ID, 'модератора', 'ID'),
-            AddSomethingCommand(Rank.ORGANIZER, Step.EVENT_NAME, 'мероприятие', 'название')]
+            AddSomethingCommand(Rank.ORGANIZER, Step.EVENT_NAME, 'мероприятие', 'название'),
+            AddSomethingCommand(Rank.ORGANIZER, Step.ACHIEVEMENT_NAME, 'достижение', 'название')]
 unknown_command = UnknownCommand()
 
 
