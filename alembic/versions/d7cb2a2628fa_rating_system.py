@@ -1,7 +1,7 @@
-"""'rating_system2'
+"""rating_system
 
 Revision ID: d7cb2a2628fa
-Revises: 37ff82f5f82c
+Revises: c31e1e55ffa3
 Create Date: 2022-07-09 17:14:08.133035
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'd7cb2a2628fa'
-down_revision = '37ff82f5f82c'
+down_revision = 'c31e1e55ffa3'
 branch_labels = None
 depends_on = None
 
