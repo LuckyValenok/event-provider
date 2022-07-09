@@ -8,28 +8,13 @@ keyboards_by_rank = {
         .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль', 'Мои друзья', 'Добавить друга',
              'Мои заявки в друзья'),
     Rank.MODER: ReplyKeyboardMarkup(resize_keyboard=True)
-        .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
+        .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль', 'Мои друзья', 'Добавить друга',
+             'Мои заявки в друзья'),
     Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
         .row('Добавить мероприятие', 'Мои мероприятия')
         .row('Добавить модератора', 'Добавить достижение'),
     Rank.ADMIN: ReplyKeyboardMarkup(resize_keyboard=True)
         .add('Интересы', 'Группы', 'Добавить организатора')
-}
-
-keyboards_for_friend_request = {
-    Rank.USER: lambda f: InlineKeyboardMarkup().add(
-        InlineKeyboardButton('Принять заявку', callback_data=f"acceptreq_{f.friend_id}"),
-        InlineKeyboardButton('Отклонить заявку', callback_data=f"declinereq_{f.friend_id}"))
-}
-
-keyboards_for_friend_list = {
-    Rank.USER: lambda f: InlineKeyboardMarkup().add(
-        InlineKeyboardButton('Удалить из друзей', callback_data=f"deletefr_{f.friend_id}"))
-}
-
-keyboard_for_visited_user = {
-    Rank.ORGANIZER: lambda f: InlineKeyboardMarkup().add(
-        InlineKeyboardButton('Начислить баллы активности', callback_data=f"addrate_{f.user_id}"))
 }
 
 keyboards_by_status_event_and_by_rank = {
@@ -44,9 +29,11 @@ keyboards_by_status_event_and_by_rank = {
             .row(InlineKeyboardButton('Отметить присутствующих', callback_data=f"marpr_{e.id}")),
     },
     StatusEvent.FINISHED: {
-        Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()
-            .add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{e.id}"),
-                 InlineKeyboardButton('Просмотреть отзывы', callback_data=f"fbst_{e.id}")),
+        Rank.ORGANIZER: lambda e: InlineKeyboardMarkup().add(
+            InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{e.id}"),
+            InlineKeyboardButton('Просмотреть отзывы', callback_data=f"fbst_{e.id}")),
+        Rank.USER: lambda e: InlineKeyboardMarkup().add(
+            InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{e.id}"))
     }
 }
 

@@ -4,11 +4,12 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from controller import Controller
-from data.keyboards import change_user_data_keyboard, change_event_data_keyboard, keyboard_for_visited_user
+from data.keyboards import change_user_data_keyboard, change_event_data_keyboard
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
 from models import User, Interest, LocalGroup, UserInterests, UserGroups, EventEditors
+from models.achievement import OrganizerToUserAchievement
 from models.basemodel import BaseModel
 from models.user import OrganizerRateUser
 
@@ -177,8 +178,9 @@ class TakePartCallback(Callback, ABC):
                 if user.rank == Rank.USER:
                     code, output = controller.generate_qr_code(event, user)
 
-                    await query.message.answer(f'Ваш код, который вы должны предоставить модератору мероприятия: {code}\n'
-                                               f'Или QR-код:')
+                    await query.message.answer(
+                        f'Ваш код, который вы должны предоставить модератору мероприятия: {code}\n'
+                        f'Или QR-код:')
                     try:
                         await query.message.answer_photo(output)
                     finally:
@@ -226,7 +228,7 @@ class ManageUserAttachmentCallback(Callback, ABC):
 
                 await query.message.answer(
                     f'{entity.name} успешно {"добавлен в " + self.name.lower() if not de_attach else "удален из " + self.name_remove_form.lower()}')
-            except ValueError / NoResultFound:
+            except ValueError or NoResultFound:
                 await query.message.answer(f'{self.name} с этим названием отсутствуют')
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
@@ -238,18 +240,23 @@ class GetAttendentStatisticsCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         eid = int(query.data.split('_')[-1])
 
-        visited_stats = controller.get_visited_users(eid)
-        for visuser in visited_stats:
-            keyboard = keyboard_for_visited_user[user.rank](visuser)
-            await query.message.answer(visuser.first_name + " " + visuser.middle_name + " " + visuser.last_name, reply_markup=keyboard)
+        visited_users = controller.get_visited_users(eid)
+        for visited_user in visited_users:
+            keyboard = InlineKeyboardMarkup()\
+                .row(InlineKeyboardButton('Начислить баллы активности', callback_data=f"addrate_{visited_user.id}"))\
+                .row(InlineKeyboardButton('Выдать достижение', callback_data=f"addachieve_{visited_user.id}"))
+            await query.message.answer(visited_user.first_name + " " + visited_user.middle_name + " " + visited_user.last_name,
+                                       reply_markup=keyboard)
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('atst_') and user.rank is Rank.ORGANIZER
 
 
-class GiveRateToUser(Callback, ABC):
-
+class GiveRateToUserCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+        await query.message.answer('Введите количество баллов')
+
         uid = int(query.data.split('_')[-1])
         controller.db_session.add_model(OrganizerRateUser(org_id=user.id, user_id=uid))
         user.step = Step.GIVE_RATING
@@ -359,11 +366,11 @@ class EndEventCallback(Callback, ABC):
                 event.status = StatusEvent.FINISHED
                 controller.save()
 
+                keyboard = InlineKeyboardMarkup().add(
+                    InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{event.id}"))
                 for user in controller.get_visited_users(eid):
                     await query.message.bot.send_message(chat_id=user.id, text=f'Мероприятие {event.name} завершено',
-                                                         reply_markup=InlineKeyboardMarkup()
-                                                         .add(InlineKeyboardButton('Оставить отзыв',
-                                                                                   callback_data=f"feb_{event.id}")))
+                                                         reply_markup=keyboard)
 
                 await query.message.answer('Мероприятие успешно завершено')
             else:
@@ -373,6 +380,51 @@ class EndEventCallback(Callback, ABC):
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('ende_') and user.rank is Rank.ORGANIZER
+
+
+class GiveAchievementListCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        uid = int(query.data.split('_')[-1])
+        if controller.has_user_by_id(uid):
+            controller.db_session.add_model(OrganizerToUserAchievement(organizer_id=user.id, user_id=uid))
+            achievements = controller.get_achievement_list()
+            replKeyboard = InlineKeyboardMarkup()
+            for achievement in achievements:
+                replKeyboard.add(InlineKeyboardButton(f'{achievement.name}', callback_data=f'ach_{achievement.id}'))
+            await query.message.answer('Выберете достижение, которое хотите выдать пользователю: ',
+                                       reply_markup=replKeyboard)
+        else:
+            await query.message.answer('Такого пользователя нет')
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('addachieve_') and user.rank is Rank.ORGANIZER
+
+
+class GiveAchievementCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        uid = controller.get_achievement_reciever(user.id).user_id
+        aid = int(query.data.split('_')[-1])
+        try:
+            achievement = controller.get_achievement_by_id(aid)
+            target_user = controller.get_user_by_id(uid)
+            target_user.achievements.append(achievement)
+            req = controller.db_session.query(OrganizerToUserAchievement) \
+                .filter(OrganizerToUserAchievement.organizer_id == user.id,
+                        OrganizerToUserAchievement.user_id == uid).one()
+            controller.db_session.delete_model(req)
+            controller.save()
+            await query.message.answer("Достижение вручено пользователю!")
+        except NoResultFound:
+            await query.message.answer("Достижение не найдено")
+
+        await query.message.delete()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('ach_') and user.rank is Rank.ORGANIZER
 
 
 callbacks = [TakePartCallback(),
@@ -399,7 +451,9 @@ callbacks = [TakePartCallback(),
              AcceptFriendRequestCallback(),
              DeclineFriendRequestCallback(),
              DeleteFriendCallback(),
-             GiveRateToUser(),
+             GiveRateToUserCallback(),
+             GiveAchievementListCallback(),
+             GiveAchievementCallback(),
              UnknownCallback()]
 
 
