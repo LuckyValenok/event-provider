@@ -1,5 +1,4 @@
 import datetime
-import os
 import random
 import string
 from io import BytesIO
@@ -20,21 +19,55 @@ from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, EventUsers, Event, EventEditors
+from models import User, EventUsers, Event, EventEditors, Achievement
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
 from models.user import UserFriends, OrganizerRateUser
 
 
-def get_code_from_photo(file_name):
-    img = Image.open(f'{file_name}')
+def get_code_from_photo(_bytes: BytesIO):
+    img = Image.open(_bytes)
     try:
         return decode(img)[-1].data.decode("utf-8")
     except IndexError:
         return None
     finally:
         img.close()
-        os.remove(f'{file_name}')
+        _bytes.close()
+
+
+def generate_image_achievements(user: User):
+    achievements = user.achievements
+    size = len(achievements)
+    if size == 0:
+        return None
+    line_size = int(size / 4)
+    if size % 4 != 0:
+        line_size += 1
+    new_image = Image.new('RGB', (size * 200 if line_size == 1 else 800, 200 * line_size), (250, 250, 250))
+    x, y = 0, 0
+    for achievement in user.achievements:
+        _bytes = BytesIO(achievement.image)
+        image = Image.open(_bytes)
+        try:
+            new_image.paste(image, (x, y))
+        finally:
+            _bytes.close()
+            image.close()
+
+        x += 200
+
+        if x / 200 >= 4:
+            y += 200
+            x = 0
+    try:
+        output = BytesIO()
+        new_image.save(output, 'JPEG')
+        output.seek(0)
+        return output
+    finally:
+        new_image.close()
+        output.close()
 
 
 class Controller:
@@ -94,9 +127,9 @@ class Controller:
     def get_events_not_participate_user(self, uid: int):
         now = datetime.datetime.now()
         return self.db_session.query(Event).filter(
-            and_(~Event.users.any(User.id == uid), Event.date is not None, Event.date < now,
-                 Event.status == StatusEvent.UNFINISHED, Event.description is not None, Event.lng is not None,
-                 Event.lat is not None)).all()
+            and_(~Event.users.any(User.id == uid), Event.date != None, Event.date < now,
+                 Event.status == StatusEvent.UNFINISHED, Event.description != None, Event.lng != None,
+                 Event.lat != None)).all()
 
     def get_count_visited(self, eid: int) -> int:
         return len(self.db_session.query(User).filter(
@@ -249,3 +282,7 @@ class Controller:
     def get_rate_editor(self, oid):
         return self.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == oid).with_entities(OrganizerRateUser.user_id)\
             .one()
+
+    def get_achievement_by_creator(self, user: User) -> Achievement:
+        return self.db_session.query(Achievement).filter(
+            and_(Achievement.creator == user.id, Achievement.image == None)).one()

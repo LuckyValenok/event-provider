@@ -22,6 +22,8 @@ def upgrade() -> None:
                     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
                     sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
                     sa.Column('name', sa.VARCHAR(length=255), nullable=False),
+                    sa.Column('creator', sa.Integer, nullable=True),
+                    sa.ForeignKeyConstraint(['creator'], ['user.id'], ondelete='CASCADE'),
                     sa.PrimaryKeyConstraint('id'),
                     sa.UniqueConstraint('id')
                     )
@@ -30,8 +32,8 @@ def upgrade() -> None:
                     sa.Column('updated_at', sa.TIMESTAMP(), nullable=False),
                     sa.Column('id', sa.Integer(), nullable=False),
                     sa.Column('name', sa.VARCHAR(length=255), nullable=False),
-                    sa.Column('description', sa.VARCHAR(length=255), nullable=False),
-                    sa.Column('date', sa.DateTime(), nullable=False),
+                    sa.Column('description', sa.VARCHAR(length=255), nullable=True),
+                    sa.Column('date', sa.DateTime(), nullable=True),
                     sa.PrimaryKeyConstraint('id'),
                     sa.UniqueConstraint('id')
                     )
@@ -60,8 +62,6 @@ def upgrade() -> None:
                     sa.Column('last_name', sa.VARCHAR(length=255), nullable=True),
                     sa.Column('email', sa.VARCHAR(length=255), nullable=True),
                     sa.Column('phone', sa.VARCHAR(length=255), nullable=True),
-                    sa.Column('rank_id', sa.SMALLINT(), nullable=False),
-                    sa.Column('step_id', sa.Integer(), nullable=False),
                     sa.PrimaryKeyConstraint('id'),
                     sa.UniqueConstraint('email'),
                     sa.UniqueConstraint('id'),

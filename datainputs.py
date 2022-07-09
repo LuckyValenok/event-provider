@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from io import BytesIO
 
 from aiogram.types import Message, ReplyKeyboardRemove
 from sqlalchemy.exc import NoResultFound
@@ -10,7 +11,7 @@ from enums.friend_request_status import FriendRequestStatus
 from enums.ranks import Rank
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, Interest, LocalGroup
+from models import User, Interest, LocalGroup, Achievement
 from models.user import OrganizerRateUser
 
 
@@ -190,9 +191,11 @@ class MarkPresentInput(DataInput, ABC):
         else:
             photo = message.photo[-1]
 
-            await photo.download(destination_file=f'{photo.file_id}.jpg')
+            output = BytesIO()
+            await photo.download(destination_file=output)
+            output.seek(0)
 
-            code = get_code_from_photo(f'{photo.file_id}.jpg')
+            code = get_code_from_photo(output)
             if code is None:
                 user.step = Step.VERIFICATION_PRESENT
                 return 'Произошла ошибка при распознавании QR-кода. Попробуйте снова или напишите \'отмена\''
@@ -207,6 +210,48 @@ class MarkPresentInput(DataInput, ABC):
 
     def can_input(self, user, message: Message) -> bool:
         return (message.text is not None or len(message.photo) != 0) and user.step == self.from_step
+
+
+class AddAchievementDataInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ACHIEVEMENT_NAME, Step.ACHIEVEMENT_IMAGE, True)
+
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        new_name = message.text
+        try:
+            controller.get_entity_by_model_with_name(Achievement, Achievement.name, new_name)
+            user.step = self.from_step
+            return 'Уже существует достижение с данным названием. Попробуйте снова или напишите \'отмена\''
+        except NoResultFound:
+            controller.db_session.add_model(Achievement(name=new_name, creator=user.id))
+            return 'Теперь вам необходимо предоставить картинку (200x200)'
+
+
+class AchievementImageDataInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.ACHIEVEMENT_IMAGE, Step.NONE, False)
+
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        photo = message.photo[-1]
+        if photo.width != 200 or photo.height != 200:
+            user.step = self.from_step
+            return 'Размер картинки должен быть 200x200'
+
+        achievement = controller.get_achievement_by_creator(user)
+
+        output = BytesIO()
+        try:
+            await photo.download(destination_file=output)
+            output.seek(0)
+
+            achievement.image = output.getbuffer().tobytes()
+        finally:
+            output.close()
+
+        return 'Картинка для достижения успешно загружена'
+
+    def can_input(self, user, message: Message) -> bool:
+        return len(message.photo) != 0 and user.step == self.from_step
 
 
 data_inputs = [
@@ -226,6 +271,8 @@ data_inputs = [
     FeedbackToEventInput(),
     MarkPresentInput(),
     AddFriendRequestInput(),
+    AddAchievementDataInput(),
+    AchievementImageDataInput(),
     AppointAsInput(Step.NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
     AppointAsInput(Step.NEW_MODER_ID, Step.NONE, Rank.MODER, 'модератором'),
     ManageSomethingDataInput(Step.INTEREST_NAME_FOR_ADD, Step.NONE, 'Интерес', Interest, Interest.name,
