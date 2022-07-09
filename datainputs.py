@@ -12,6 +12,7 @@ from enums.ranks import Rank
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, Interest, LocalGroup, Achievement
+from models.user import OrganizerRateUser
 
 
 class DataInput(ABC):
@@ -105,6 +106,22 @@ class AddFriendRequestInput(DataInput, ABC):
             return 'Заявка отправлена!'
         except ValueError / NoResultFound:
             return 'Такого пользователя нет. Попробуйте снова или напишите \'отмена\''
+
+
+class GiveRatingInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.GIVE_RATING, Step.NONE, True)
+
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        uid = controller.get_rate_editor(user.id)
+        amount = int(message.text)
+        controller.give_rate(uid.user_id, amount)
+        req = controller.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == user.id, OrganizerRateUser.user_id == uid.user_id).one()
+        controller.db_session.delete_model(req)
+        return 'Баллы успешно начислены!'
+
+    def can_input(self, user: User, message: Message) -> bool:
+        return user.step == Step.GIVE_RATING and message.text is not None
 
 
 class AppointAsInput(DataInput, ABC):
@@ -265,7 +282,8 @@ data_inputs = [
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_ADD, Step.NONE, 'Группа', LocalGroup, LocalGroup.name,
                              lambda n: LocalGroup(name=n)),
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_REMOVE, Step.NONE, 'Группа', LocalGroup,
-                             LocalGroup.name, None)
+                             LocalGroup.name, None),
+    GiveRatingInput()
 ]
 
 

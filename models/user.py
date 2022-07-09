@@ -1,20 +1,20 @@
 from sqlalchemy import Column, VARCHAR, Integer, ForeignKey, Enum
 from sqlalchemy.orm import relation
 
+from enums.friend_request_status import FriendRequestStatus
 from enums.ranks import Rank
 from enums.steps import Step
-from enums.friend_request_status import FriendRequestStatus
 from .achievement import Achievement
 from .basemodel import BaseModel
 from .interest import Interest
 from .local_group import LocalGroup
 
 
-class UserAchievements(BaseModel):
-    __tablename__ = 'user_achievements'
+class OrganizerRateUser(BaseModel):
+    __tablename__ = 'user_rate'
 
+    org_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
-    achievement_id = Column(Integer, ForeignKey('achievement.id', ondelete='CASCADE'), nullable=False, index=True)
 
 
 class UserFriends(BaseModel):
@@ -23,6 +23,13 @@ class UserFriends(BaseModel):
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     friend_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     friend_request_status = Column(Enum(FriendRequestStatus), nullable=True)
+
+
+class UserAchievements(BaseModel):
+    __tablename__ = 'user_achievements'
+
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    achievement_id = Column(Integer, ForeignKey('achievement.id', ondelete='CASCADE'), nullable=False, index=True)
 
 
 class UserInterests(BaseModel):
@@ -48,8 +55,9 @@ class User(BaseModel):
     last_name = Column(VARCHAR(255), nullable=True)
     email = Column(VARCHAR(255), nullable=True, unique=True)
     phone = Column(VARCHAR(255), nullable=True, unique=True)
-    rank = Column(Enum(Rank), nullable=True)
-    step = Column(Enum(Step), nullable=True)
+    rank = Column(Enum(Rank), nullable=False)
+    step = Column(Enum(Step), nullable=False)
+    rating = Column(Integer, nullable=True)
 
     achievements = relation(
         Achievement,

@@ -22,7 +22,7 @@ from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, EventUsers, Event, EventEditors, Achievement
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
-from models.user import UserFriends
+from models.user import UserFriends, OrganizerRateUser
 
 
 def get_code_from_photo(_bytes: BytesIO):
@@ -138,7 +138,8 @@ class Controller:
     def get_visited_users(self, eid: int):
         return self.db_session.query(User).filter(
             and_(EventUsers.user_id == User.id, EventUsers.event_id == eid,
-                 EventUsers.status_attendion == StatusAttendion.ARRIVED)).all()
+                 EventUsers.status_attendion == StatusAttendion.ARRIVED, User.rank == Rank.USER))\
+            .with_entities(EventUsers.user_id, User.first_name, User.middle_name, User.last_name).all()
 
     def get_editor_event(self, uid: int) -> EventEditors:
         return self.db_session.query(EventEditors).filter(EventEditors.user_id == uid).one()
@@ -272,6 +273,15 @@ class Controller:
         self.db_session.delete_model(request)
         self.db_session.delete_model(request2)
         self.db_session.commit_session()
+
+    def give_rate(self, uid, amount: int):
+        request = self.db_session.query(User).filter(User.id == uid).one()
+        request.rating += amount
+        self.db_session.commit_session()
+
+    def get_rate_editor(self, oid):
+        return self.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == oid).with_entities(OrganizerRateUser.user_id)\
+            .one()
 
     def get_achievement_by_creator(self, user: User) -> Achievement:
         return self.db_session.query(Achievement).filter(

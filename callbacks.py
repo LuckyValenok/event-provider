@@ -4,12 +4,13 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from sqlalchemy.exc import NoResultFound
 
 from controller import Controller
-from data.keyboards import change_user_data_keyboard, change_event_data_keyboard
+from data.keyboards import change_user_data_keyboard, change_event_data_keyboard, keyboard_for_visited_user
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
 from models import User, Interest, LocalGroup, UserInterests, UserGroups, EventEditors
 from models.basemodel import BaseModel
+from models.user import OrganizerRateUser
 
 
 class Callback(ABC):
@@ -236,12 +237,26 @@ class ManageUserAttachmentCallback(Callback, ABC):
 class GetAttendentStatisticsCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         eid = int(query.data.split('_')[-1])
-        await query.answer()
-        await query.message.answer(
-            f"В мероприятии участвовал(-и) {controller.get_count_visited(eid)} человек(-а).")
+
+        visited_stats = controller.get_visited_users(eid)
+        for visuser in visited_stats:
+            keyboard = keyboard_for_visited_user[user.rank](visuser)
+            await query.message.answer(visuser.first_name + " " + visuser.middle_name + " " + visuser.last_name, reply_markup=keyboard)
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('atst_') and user.rank is Rank.ORGANIZER
+
+
+class GiveRateToUser(Callback, ABC):
+
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        uid = int(query.data.split('_')[-1])
+        controller.db_session.add_model(OrganizerRateUser(org_id=user.id, user_id=uid))
+        user.step = Step.GIVE_RATING
+        controller.db_session.commit_session()
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('addrate_')
 
 
 class UserFeedbackCallback(Callback, ABC):
@@ -384,6 +399,7 @@ callbacks = [TakePartCallback(),
              AcceptFriendRequestCallback(),
              DeclineFriendRequestCallback(),
              DeleteFriendCallback(),
+             GiveRateToUser(),
              UnknownCallback()]
 
 
