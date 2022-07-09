@@ -28,7 +28,7 @@ class DataInput(ABC):
         pass
 
     async def input(self, controller: Controller, user: User, message: Message):
-        if self.can_be_canceled and message.text.lower() in 'отмена':
+        if self.can_be_canceled and message.text is not None and message.text.lower() in 'отмена':
             user.step = Step.NONE
             controller.save()
 
