@@ -104,13 +104,14 @@ class AddFriendRequestInput(DataInput, ABC):
             controller.add_friend(user.id, uid, FriendRequestStatus.ACCEPTED)
             controller.add_friend(uid, user.id, FriendRequestStatus.WAITING)
             return 'Заявка отправлена!'
-        except ValueError / NoResultFound:
+        except ValueError or NoResultFound:
+            user.step = Step.ADD_FRIEND
             return 'Такого пользователя нет. Попробуйте снова или напишите \'отмена\''
 
 
 class GiveRatingInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.GIVE_RATING, Step.NONE, True)
+        super().__init__(Step.GIVE_RATING, Step.NONE, False)
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         uid = controller.get_rate_editor(user.id)
@@ -252,17 +253,6 @@ class AchievementImageDataInput(DataInput, ABC):
 
     def can_input(self, user, message: Message) -> bool:
         return len(message.photo) != 0 and user.step == self.from_step
-
-
-class GiveAchievementInput(DataInput, ABC):
-    def __init__(self):
-        super().__init__(Step.GIVE_ACHIEVEMENT, Step.NONE, False)
-
-    async def abstract_input(self, controller: Controller, user: User, message: Message):
-        return ''
-
-    def can_input(self, user, message: Message) -> bool:
-        return user.step == Step.GIVE_ACHIEVEMENT
 
 
 data_inputs = [

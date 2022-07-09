@@ -11,7 +11,8 @@ class Achievement(BaseModel):
     creator = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=True, index=True)
 
 
-class UserAchievement(BaseModel):
-    __tablename__ = 'achievement_to_user'
-    org_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+class OrganizerToUserAchievement(BaseModel):
+    __tablename__ = 'organizer_to_user_achievement'
+
+    organizer_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)

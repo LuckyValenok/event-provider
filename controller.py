@@ -20,7 +20,7 @@ from enums.status_event import StatusEvent
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, EventUsers, Event, EventEditors, Achievement
-from models.achievement import UserAchievement
+from models.achievement import OrganizerToUserAchievement
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
 from models.user import UserFriends, OrganizerRateUser
@@ -68,7 +68,6 @@ def generate_image_achievements(user: User):
         return output
     finally:
         new_image.close()
-
 
 
 class Controller:
@@ -138,8 +137,7 @@ class Controller:
     def get_visited_users(self, eid: int):
         return self.db_session.query(User).filter(
             and_(EventUsers.user_id == User.id, EventUsers.event_id == eid,
-                 EventUsers.status_attendion == StatusAttendion.ARRIVED, User.rank == Rank.USER))\
-            .with_entities(EventUsers.user_id, User.first_name, User.middle_name, User.last_name).all()
+                 EventUsers.status_attendion == StatusAttendion.ARRIVED, User.rank == Rank.USER)).all()
 
     def get_editor_event(self, uid: int) -> EventEditors:
         return self.db_session.query(EventEditors).filter(EventEditors.user_id == uid).one()
@@ -194,7 +192,7 @@ class Controller:
         return self.db_session.query(model).all()
 
     def add_new_user(self, uid):
-        self.db_session.add_model(model=User(id=uid, rank=Rank.USER, step=Step.FIRST_NAME))
+        self.db_session.add_model(model=User(id=uid, rank=Rank.USER, step=Step.FIRST_NAME, rating=0))
 
     def get_entity_by_model_with_name(self, model, model_column, name):
         return self.db_session.query(model).filter(model_column == name).one()
@@ -240,7 +238,8 @@ class Controller:
     def get_friend_list(self, user):
         return self.db_session.query(UserFriends, User).filter(UserFriends.user_id == user.id,
                                                                UserFriends.friend_id == User.id,
-                                                               UserFriends.friend_request_status == FriendRequestStatus.ACCEPTED).all()
+                                                               UserFriends.friend_request_status == FriendRequestStatus.ACCEPTED) \
+            .with_entities(User.first_name, User.middle_name, User.last_name, UserFriends.friend_id).all()
 
     def add_friend(self, uid, fid, status):
         self.db_session.add_model(UserFriends(user_id=uid, friend_id=fid, friend_request_status=status))
@@ -248,7 +247,8 @@ class Controller:
     def get_friend_requests(self, uid):
         return self.db_session.query(UserFriends, User).filter(UserFriends.user_id == uid,
                                                                UserFriends.friend_id == User.id,
-                                                               UserFriends.friend_request_status == FriendRequestStatus.WAITING).all()
+                                                               UserFriends.friend_request_status == FriendRequestStatus.WAITING) \
+            .with_entities(User.first_name, User.middle_name, User.last_name, UserFriends.friend_id).all()
 
     def accept_friend_request(self, uid, fid):
         request = self.db_session.query(UserFriends).filter(UserFriends.user_id == uid,
@@ -280,8 +280,7 @@ class Controller:
         self.db_session.commit_session()
 
     def get_rate_editor(self, oid):
-        return self.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == oid).with_entities(OrganizerRateUser.user_id)\
-            .one()
+        return self.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == oid).one()
 
     def get_achievement_by_creator(self, user: User) -> Achievement:
         return self.db_session.query(Achievement).filter(
@@ -291,6 +290,8 @@ class Controller:
         return self.db_session.query(Achievement).all()
 
     def get_achievement_reciever(self, oid):
-        return self.db_session.query(UserAchievement).filter(UserAchievement.org_id == oid)\
-            .with_entities(UserAchievement.user_id)\
-            .one()
+        return self.db_session.query(OrganizerToUserAchievement).filter(
+            OrganizerToUserAchievement.organizer_id == oid).one()
+
+    def get_achievement_by_id(self, aid: int):
+        return self.db_session.query(Achievement).filter(Achievement.id == aid).one()

@@ -56,8 +56,8 @@ class User(BaseModel):
     email = Column(VARCHAR(255), nullable=True, unique=True)
     phone = Column(VARCHAR(255), nullable=True, unique=True)
     rank = Column(Enum(Rank), nullable=True)
-    step = Column(Enum(Step), nullable=False)
-    rating = Column(Integer, nullable=False)
+    step = Column(Enum(Step), nullable=True)
+    rating = Column(Integer, nullable=True)
 
     achievements = relation(
         Achievement,
