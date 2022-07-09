@@ -29,7 +29,7 @@ from models.user import UserFriends
 def get_code_from_photo(file_name):
     img = Image.open(f'{file_name}')
     try:
-        return decode(img)[-1].data
+        return decode(img)[-1].data.decode("utf-8")
     except IndexError:
         return None
     finally:
@@ -88,8 +88,8 @@ class Controller:
         return self.db_session.query(Event).filter(Event.users.any(User.id == uid)).all()
 
     def get_events_by_user_without_finished(self, uid: int):
-        return self.db_session.query(Event).filter(
-            and_(Event.users.any(User.id == uid), Event.status is StatusEvent.UNFINISHED)).all()
+        return self.db_session.query(Event).filter(Event.users.any(User.id == uid)).filter(
+            Event.status == StatusEvent.UNFINISHED).all()
 
     def get_events_not_participate_user(self, uid: int):
         now = datetime.datetime.now()
