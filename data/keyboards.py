@@ -17,7 +17,8 @@ keyboards_by_rank = {
 keyboards_by_status_event_and_by_rank = {
     StatusEvent.UNFINISHED: {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()
-            .add(InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}")),
+            .row(InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}"))
+            .row(InlineKeyboardButton('Завершить мероприятие', callback_data=f"ende_{e.id}")),
         Rank.USER: lambda e: InlineKeyboardMarkup()
             .add(InlineKeyboardButton('Отменить заявку на участие', callback_data=f"ecan_{e.id}")),
         Rank.MODER: lambda e: InlineKeyboardMarkup()
@@ -28,10 +29,6 @@ keyboards_by_status_event_and_by_rank = {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()
             .add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{e.id}"),
                  InlineKeyboardButton('Просмотреть отзывы', callback_data=f"fbst_{e.id}")),
-        Rank.USER: lambda e: InlineKeyboardMarkup()
-            .add(InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{e.id}")),
-        Rank.MODER: lambda e: InlineKeyboardMarkup()
-            .add(InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{e.id}"))
     }
 }
 

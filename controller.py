@@ -1,3 +1,4 @@
+import datetime
 import os
 import random
 import string
@@ -84,13 +85,26 @@ class Controller:
     def get_events_by_user(self, uid: int):
         return self.db_session.query(Event).filter(Event.users.any(User.id == uid)).all()
 
+    def get_events_by_user_without_finished(self, uid: int):
+        return self.db_session.query(Event).filter(
+            and_(Event.users.any(User.id == uid), Event.status is StatusEvent.UNFINISHED)).all()
+
     def get_events_not_participate_user(self, uid: int):
-        return self.db_session.query(Event).filter(~Event.users.any(User.id == uid)).all()
+        now = datetime.datetime.now()
+        return self.db_session.query(Event).filter(
+            and_(~Event.users.any(User.id == uid), Event.date is not None, Event.date < now,
+                 Event.status == StatusEvent.UNFINISHED, Event.description is not None, Event.lng is not None,
+                 Event.lat is not None)).all()
 
     def get_count_visited(self, eid: int) -> int:
-        return len(self.db_session.query(Event).filter(
-            and_(Event.id == eid, EventUsers.status_attendion == StatusAttendion.ARRIVED,
+        return len(self.db_session.query(User).filter(
+            and_(EventUsers.event_id == eid, EventUsers.status_attendion == StatusAttendion.ARRIVED,
                  User.rank == Rank.USER)).all())
+
+    def get_visited_users(self, eid: int):
+        return self.db_session.query(User).filter(
+            and_(EventUsers.user_id == User.id, EventUsers.event_id == eid,
+                 EventUsers.status_attendion == StatusAttendion.ARRIVED)).all()
 
     def get_editor_event(self, uid: int) -> EventEditors:
         return self.db_session.query(EventEditors).filter(EventEditors.user_id == uid).one()

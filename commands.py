@@ -22,7 +22,8 @@ class Command(ABC):
 
 class GetMyEventsCommand(Command, ABC):
     async def execute(self, controller: Controller, user: User, message: Message):
-        events = controller.get_events_by_user(user.id)
+        events = controller.get_events_by_user(
+            user.id) if user.rank == Rank.ORGANIZER else controller.get_events_by_user_without_finished(user.id)
         if len(events) == 0:
             await message.answer('В данный момент у вас нет мероприятий')
         else:
@@ -37,9 +38,9 @@ class GetMyEventsCommand(Command, ABC):
                     keyboard = keyboards_by_status_event_and_by_rank[event.status][user.rank](event)
                 except KeyError:
                     keyboard = None
-                await message.answer(str_event, reply_markup=keyboard)
                 if event.lat is not None and event.lng is not None:
                     await message.answer_location(event.lat, event.lng)
+                await message.answer(str_event, reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
@@ -54,14 +55,14 @@ class GetAllEventsCommand(Command, ABC):
             await message.answer('В данный момент нет активных мероприятий')
         else:
             for event in events:
-                str_event = f'⭐️Название: {event.name}\n' \
-                            f'├    Описание: {event.description if event.description is not None else "отсутствует"}\n' \
-                            f'└    Дата: {event.date if event.date is not None else "не назначена"}'
                 keyboard = InlineKeyboardMarkup().add(
                     InlineKeyboardButton('Записаться на мероприятие', callback_data=f'tp_{event.id}'))
-                await message.answer(str_event, reply_markup=keyboard)
                 if event.lat is not None and event.lng is not None:
                     await message.answer_location(event.lat, event.lng)
+                await message.answer(f'⭐️Название: {event.name}\n'
+                                     f'├    Описание: {event.description if event.description is not None else "отсутствует"}\n'
+                                     f'└    Дата: {event.date if event.date is not None else "не назначена"}',
+                                     reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or

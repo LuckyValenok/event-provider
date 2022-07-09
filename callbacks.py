@@ -46,7 +46,7 @@ class ChangeDataInEventCallback(Callback, ABC):
 
             await query.message.answer('Пожалуйста, выберите параметр, который Вы хотите изменить.',
                                        reply_markup=change_event_data_keyboard)
-            await query.message.delete()
+
         except ValueError:
             if _type in 'name':
                 user.step = Step.EVENT_NAME
@@ -63,7 +63,6 @@ class ChangeDataInEventCallback(Callback, ABC):
 
             controller.save()
             await query.message.answer(f'Пожалуйста, введите {name}')
-            await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('ech_') and user.rank == Rank.ORGANIZER
@@ -79,7 +78,6 @@ class ChangeDataInUserCallback(Callback, ABC):
         if _type in 'user':
             await query.message.answer('Пожалуйста, выберите, что хотите изменить',
                                        reply_markup=change_user_data_keyboard)
-            await query.message.delete()
             return
         elif _type in 'firstname':
             user.step = Step.FIRST_NAME_ONLY
@@ -99,7 +97,6 @@ class ChangeDataInUserCallback(Callback, ABC):
 
         controller.save()
         await query.message.answer(f'Пожалуйста, введите {name}')
-        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('change_user')
@@ -126,7 +123,6 @@ class ManageSomethingCallback(Callback, ABC):
         controller.save()
 
         await query.message.answer(self.message)
-        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return (self.rank is None or user.rank == self.rank) and query.data.endswith(
@@ -159,8 +155,6 @@ class TakePartCallback(Callback, ABC):
                 controller.save()
         except NoResultFound:
             await query.message.answer('Такого мероприятия нет')
-
-        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('tp_') and (user.rank is Rank.USER or user.rank is Rank.MODER)
@@ -203,8 +197,6 @@ class ManageUserAttachmentCallback(Callback, ABC):
             except ValueError / NoResultFound:
                 await query.message.answer(f'{self.name} с этим названием отсутствуют')
 
-        await query.message.delete()
-
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('att_' + self.model.__tablename__) or query.data.startswith(
             'deatt_' + self.model.__tablename__)
@@ -216,7 +208,6 @@ class GetAttendentStatisticsCallback(Callback, ABC):
         await query.answer()
         await query.message.answer(
             f"В мероприятии участвовал(-и) {controller.get_count_visited(eid)} человек(-а).")
-        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('atst_') and user.rank is Rank.ORGANIZER
@@ -226,7 +217,7 @@ class UserFeedbackCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
         await query.message.answer('Оставьте свой отзыв :)')
-        await query.message.delete()
+
         eid = int(query.data.split('_')[-1])
         controller.add_event_editor(eid, user.id)
         user.step = Step.FEEDBACK_TEXT
@@ -256,7 +247,6 @@ class FeedbackStatisticsCallback(Callback, ABC):
         else:
             feedbacks = 'отсутствуют'
         await query.message.answer(f'Отзывы:\n\n{feedbacks}')
-        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('fbst_') and user.rank is Rank.ORGANIZER
@@ -281,8 +271,6 @@ class CancelEventCallback(Callback, ABC):
                 await query.message.answer("Вы уже не принимаете участие в этом мероприятии или оно завершилось")
         except NoResultFound:
             await query.message.answer('Такого мероприятия нет')
-
-        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('ecan_') and (user.rank is Rank.USER or user.rank is Rank.MODER)
@@ -310,10 +298,35 @@ class MarkPresentCallback(Callback, ABC):
         except NoResultFound:
             await query.message.answer('Такого мероприятия нет')
 
-        await query.message.delete()
-
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('marpr_') and user.rank is Rank.MODER
+
+
+class EndEventCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        eid = int(query.data.split('_')[-1])
+        try:
+            event = controller.get_event_by_id(eid)
+            if event.status == StatusEvent.UNFINISHED:
+                event.status = StatusEvent.FINISHED
+                controller.save()
+
+                for user in controller.get_visited_users(eid):
+                    await query.message.bot.send_message(chat_id=user.id, text=f'Мероприятие {event.name} завершено',
+                                                         reply_markup=InlineKeyboardMarkup()
+                                                         .add(InlineKeyboardButton('Оставить отзыв',
+                                                                                   callback_data=f"feb_{event.id}")))
+
+                await query.message.answer('Мероприятие успешно завершено')
+            else:
+                await query.message.answer('Мероприятие уже завершено')
+        except NoResultFound:
+            await query.message.answer('Такого мероприятия нет')
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('ende_') and user.rank is Rank.ORGANIZER
 
 
 callbacks = [TakePartCallback(),
@@ -321,6 +334,7 @@ callbacks = [TakePartCallback(),
              CancelEventCallback(),
              MarkPresentCallback(),
              ChangeDataInUserCallback(),
+             EndEventCallback(),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
                                           lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
              ManageUserAttachmentCallback('Группы', 'Групп', LocalGroup, UserGroups, UserGroups.group_id,
