@@ -27,6 +27,11 @@ keyboards_for_friend_list = {
         InlineKeyboardButton('Удалить из друзей', callback_data=f"deletefr_{f.friend_id}"))
 }
 
+keyboard_for_visited_user = {
+    Rank.ORGANIZER: lambda f: InlineKeyboardMarkup().add(
+        InlineKeyboardButton('Начислить баллы активности', callback_data=f"addrate_{f.user_id}"))
+}
+
 keyboards_by_status_event_and_by_rank = {
     StatusEvent.UNFINISHED: {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()

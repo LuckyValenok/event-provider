@@ -20,7 +20,7 @@ from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, EventUsers, Event, EventEditors
+from models import User, EventUsers, Event, EventEditors, OrgRateUser
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
 from models.user import UserFriends
@@ -105,7 +105,8 @@ class Controller:
     def get_visited_users(self, eid: int):
         return self.db_session.query(User).filter(
             and_(EventUsers.user_id == User.id, EventUsers.event_id == eid,
-                 EventUsers.status_attendion == StatusAttendion.ARRIVED)).all()
+                 EventUsers.status_attendion == StatusAttendion.ARRIVED, User.rank == Rank.USER))\
+            .with_entities(EventUsers.user_id, User.first_name, User.middle_name, User.last_name).all()
 
     def get_editor_event(self, uid: int) -> EventEditors:
         return self.db_session.query(EventEditors).filter(EventEditors.user_id == uid).one()
@@ -239,3 +240,12 @@ class Controller:
         self.db_session.delete_model(request)
         self.db_session.delete_model(request2)
         self.db_session.commit_session()
+
+    def give_rate(self, uid, amount: int):
+        request = self.db_session.query(User).filter(User.id == uid).one()
+        request.rating = amount
+        self.db_session.commit_session()
+
+    def get_rate_editor(self, oid):
+        return self.db_session.query(OrgRateUser).filter(OrgRateUser.org_id == oid).with_entities(OrgRateUser.user_id)\
+            .one()
