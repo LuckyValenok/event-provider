@@ -192,7 +192,8 @@ class Controller:
 
     def get_friend_list(self, user):
         return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == user.id,
-                                                              UserFriend.friend_id == User.id) \
+                                                              UserFriend.friend_id == User.id,
+                                                              UserFriend.friend_request_status == FriendRequestStatus.ACCEPTED) \
             .with_entities(User.first_name, User.middle_name, User.last_name).all()
 
     def add_friend(self, uid, fid):
