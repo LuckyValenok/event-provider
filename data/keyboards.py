@@ -10,9 +10,10 @@ keyboards_by_rank = {
     Rank.MODER: ReplyKeyboardMarkup(resize_keyboard=True)
         .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
     Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-        .add('Добавить мероприятие', 'Мои мероприятия', 'Добавить модератора'),
+        .row('Добавить мероприятие', 'Мои мероприятия')
+        .row('Добавить модератора', 'Добавить достижение'),
     Rank.ADMIN: ReplyKeyboardMarkup(resize_keyboard=True)
-        .add('Интересы', 'Группы', 'Достижения', 'Добавить организатора')
+        .add('Интересы', 'Группы', 'Добавить организатора')
 }
 
 keyboards_for_friend_request = {

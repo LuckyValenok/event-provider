@@ -8,7 +8,7 @@ from data.keyboards import change_user_data_keyboard, change_event_data_keyboard
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
-from models import User, Interest, Achievement, LocalGroup, UserInterests, UserGroups, EventEditors
+from models import User, Interest, LocalGroup, UserInterests, UserGroups, EventEditors
 from models.basemodel import BaseModel
 
 
@@ -373,10 +373,6 @@ callbacks = [TakePartCallback(),
                                      'Напишите название нового интереса'),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'remove', Step.INTEREST_NAME_FOR_REMOVE,
                                      'Напишите название интереса для удаления'),
-             ManageSomethingCallback(Rank.ADMIN, Achievement, 'add', Step.ACHIEVEMENT_NAME_FOR_ADD,
-                                     'Напишите название нового достижения'),
-             ManageSomethingCallback(Rank.ADMIN, Achievement, 'remove', Step.ACHIEVEMENT_NAME_FOR_REMOVE,
-                                     'Напишите название достижения для удаления'),
              ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'add', Step.GROUP_NAME_FOR_ADD,
                                      'Напишите название новой группы'),
              ManageSomethingCallback(Rank.ADMIN, LocalGroup, 'remove', Step.GROUP_NAME_FOR_REMOVE,
