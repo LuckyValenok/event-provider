@@ -10,7 +10,7 @@ from enums.friend_request_status import FriendRequestStatus
 from enums.ranks import Rank
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
-from models import User, Interest, Achievement, LocalGroup
+from models import User, Interest, LocalGroup
 
 
 class DataInput(ABC):
@@ -215,8 +215,6 @@ data_inputs = [
                              lambda n: Interest(name=n)),
     ManageSomethingDataInput(Step.INTEREST_NAME_FOR_REMOVE, Step.NONE, 'Интерес', Interest,
                              Interest.name, None),
-    ManageSomethingDataInput(Step.ACHIEVEMENT_NAME_FOR_REMOVE, Step.NONE, 'Достижение', Achievement,
-                             Achievement.name, None),
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_ADD, Step.NONE, 'Группа', LocalGroup, LocalGroup.name,
                              lambda n: LocalGroup(name=n)),
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_REMOVE, Step.NONE, 'Группа', LocalGroup,
