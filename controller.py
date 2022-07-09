@@ -196,8 +196,8 @@ class Controller:
                                                               UserFriend.friend_request_status == FriendRequestStatus.ACCEPTED) \
             .with_entities(User.first_name, User.middle_name, User.last_name).all()
 
-    def add_friend(self, uid, fid):
-        self.db_session.add_model(UserFriend(user_id=uid, friend_id=fid))
+    def add_friend(self, uid, fid, status):
+        self.db_session.add_model(UserFriend(user_id=uid, friend_id=fid, friend_request_status=status))
 
     def get_friend_requests(self, uid):
         return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == uid,
@@ -210,3 +210,13 @@ class Controller:
             .one()
         request.friend_request_status = FriendRequestStatus.ACCEPTED
         self.db_session.commit_session()
+
+    def decline_friend_request(self, uid, fid):
+        request = self.db_session.query(UserFriend).filter(UserFriend.user_id == uid, UserFriend.friend_id == fid) \
+            .one()
+        request2 = self.db_session.query(UserFriend).filter(UserFriend.user_id == fid, UserFriend.friend_id == uid) \
+            .one()
+        self.db_session.delete_model(request)
+        self.db_session.delete_model(request2)
+        self.db_session.commit_session()
+
