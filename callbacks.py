@@ -173,14 +173,15 @@ class TakePartCallback(Callback, ABC):
 
                 await query.message.answer('Поздравляем, Вы принимаете участие в мероприятии!')
 
-                code, output = controller.generate_qr_code(event, user)
+                if user.rank == Rank.USER:
+                    code, output = controller.generate_qr_code(event, user)
 
-                await query.message.answer(f'Ваш код, который вы должны предоставить модератору мероприятия: {code}\n'
-                                           f'Или QR-код:')
-                try:
-                    await query.message.answer_photo(output)
-                finally:
-                    output.close()
+                    await query.message.answer(f'Ваш код, который вы должны предоставить модератору мероприятия: {code}\n'
+                                               f'Или QR-код:')
+                    try:
+                        await query.message.answer_photo(output)
+                    finally:
+                        output.close()
 
                 controller.save()
         except NoResultFound:

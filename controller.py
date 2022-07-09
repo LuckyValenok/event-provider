@@ -100,8 +100,7 @@ class Controller:
 
     def get_count_visited(self, eid: int) -> int:
         return len(self.db_session.query(User).filter(
-            and_(EventUsers.event_id == eid, EventUsers.status_attendion == StatusAttendion.ARRIVED,
-                 User.rank == Rank.USER)).all())
+            and_(EventUsers.event_id == eid, EventUsers.status_attendion == StatusAttendion.ARRIVED)).all())
 
     def get_visited_users(self, eid: int):
         return self.db_session.query(User).filter(
