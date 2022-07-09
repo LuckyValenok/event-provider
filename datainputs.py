@@ -16,16 +16,24 @@ from models import User, Interest, Achievement, LocalGroup
 class DataInput(ABC):
     from_step: Step
     to_step: Step
+    can_be_canceled: bool
 
-    def __init__(self, from_step, to_step):
+    def __init__(self, from_step, to_step, can_be_canceled=False):
         self.from_step = from_step
         self.to_step = to_step
+        self.can_be_canceled = can_be_canceled
 
     @abstractmethod
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         pass
 
     async def input(self, controller: Controller, user: User, message: Message):
+        if self.can_be_canceled and message.text.lower() in 'отмена':
+            user.step = Step.NONE
+            controller.save()
+
+            await message.answer('Операция успешно отменена', reply_markup=keyboards_by_rank[user.rank])
+            return
         user.previous_step = user.step
         user.step = self.to_step
         text = await self.abstract_input(controller, user, message)
@@ -60,7 +68,7 @@ class UserDataInput(DataInput, ABC):
 
 class EventDataInput(DataInput, ABC):
     def __init__(self, from_step, _lambda):
-        super().__init__(from_step, Step.NONE)
+        super().__init__(from_step, Step.NONE, True)
         self._lambda = _lambda
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
@@ -85,11 +93,9 @@ class EventDataInput(DataInput, ABC):
 
 class AddFriendRequestInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.ADD_FRIEND, Step.NONE)
+        super().__init__(Step.ADD_FRIEND, Step.NONE, True)
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
-        if message.text.lower() in 'отмена':
-            return 'Операция успешно отменена'
         try:
             uid = int(message.text)
             controller.get_user_by_id(uid)
@@ -105,14 +111,12 @@ class AppointAsInput(DataInput, ABC):
     name: str
 
     def __init__(self, from_step, to_step, rank, name):
-        super().__init__(from_step, to_step)
+        super().__init__(from_step, to_step, True)
         self.rank = rank
         self.name = name
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         text = message.text
-        if 'отмена' in text.lower():
-            return 'Операция успешно отменена'
         try:
             uid = int(text)
             try:
@@ -129,7 +133,7 @@ class AppointAsInput(DataInput, ABC):
 
 class ManageSomethingDataInput(DataInput, ABC):
     def __init__(self, from_step, to_step, name, model, model_column, _lambda):
-        super().__init__(from_step, to_step)
+        super().__init__(from_step, to_step, True)
         self.name = name
         self.model = model
         self.model_column = model_column
@@ -138,8 +142,6 @@ class ManageSomethingDataInput(DataInput, ABC):
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         new_name = message.text
-        if 'отмена' in new_name.lower():
-            return 'Операция успешно отменена'
         try:
             controller.manage_something_model(self.model, self.model_column,
                                               new_name, self._lambda, self.removing)
@@ -154,7 +156,7 @@ class ManageSomethingDataInput(DataInput, ABC):
 
 class FeedbackToEventInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.FEEDBACK_TEXT, Step.NONE)
+        super().__init__(Step.FEEDBACK_TEXT, Step.NONE, True)
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         controller.add_feedback_to_event(user, message.text)
@@ -163,12 +165,10 @@ class FeedbackToEventInput(DataInput, ABC):
 
 class MarkPresentInput(DataInput, ABC):
     def __init__(self):
-        super().__init__(Step.VERIFICATION_PRESENT, Step.NONE)
+        super().__init__(Step.VERIFICATION_PRESENT, Step.NONE, True)
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
         if message.text is not None:
-            if 'отмена' in message.text.lower():
-                return 'Операция успешно отменена'
             code = message.text
         else:
             photo = message.photo[-1]
