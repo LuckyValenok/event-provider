@@ -19,6 +19,10 @@ keyboards_for_friend_request = {
                                InlineKeyboardButton('Отклонить заявку', callback_data=f"declinereq_{f.friend_id}"))
 }
 
+keyboards_for_friend_list = {
+    Rank.USER: lambda f: InlineKeyboardMarkup().add(InlineKeyboardButton('Удалить из друзей', callback_data=f"deletefr_{f.friend_id}"))
+}
+
 keyboards_by_status_event_and_by_rank = {
     StatusEvent.UNFINISHED: {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from controller import Controller
-from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_and_by_rank, keyboards_for_friend_request
+from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_and_by_rank, keyboards_for_friend_request, keyboards_for_friend_list
 from enums.ranks import Rank
 from enums.steps import Step
 from models import User, Interest, Achievement, LocalGroup
@@ -26,7 +26,8 @@ class GetFriendListCommand(Command, ABC):
         if (len(friendlist) == 0):
             await message.answer("У Вас пока нет друзей.")
         for friend in friendlist:
-            await message.answer(friend[0] + " " + friend[1] + " " + friend[2])
+            keyboard = keyboards_for_friend_list[user.rank](friend)
+            await message.answer(friend[0] + " " + friend[1] + " " + friend[2], reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER and 'мои друзья' in message.text.lower())

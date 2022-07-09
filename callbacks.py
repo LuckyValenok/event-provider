@@ -52,6 +52,16 @@ class DeclineFriendRequestCallback(Callback, ABC):
         return query.data.startswith('declinereq_') and user.rank == Rank.USER
 
 
+class DeleteFriendCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        fid = query.data.split('_')[-1]
+        controller.delete_friend(user.id, fid)
+        await query.message.answer('Вы удалили этого пользователя из друзей.')
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('deletefr_') and user.rank == Rank.USER
+
+
 class ChangeDataInEventCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
@@ -362,6 +372,7 @@ callbacks = [TakePartCallback(),
              ChangeDataInEventCallback(),
              AcceptFriendRequestCallback(),
              DeclineFriendRequestCallback(),
+             DeleteFriendCallback(),
              UnknownCallback()]
 
 
