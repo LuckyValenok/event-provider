@@ -5,7 +5,8 @@ from enums.status_event import StatusEvent
 
 keyboards_by_rank = {
     Rank.USER: ReplyKeyboardMarkup(resize_keyboard=True)
-        .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль', 'Мои друзья', 'Добавить друга', 'Мои заявки в друзья'),
+        .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль', 'Мои друзья', 'Добавить друга',
+             'Мои заявки в друзья'),
     Rank.MODER: ReplyKeyboardMarkup(resize_keyboard=True)
         .add('Все мероприятия', 'Мои мероприятия', 'Мой профиль'),
     Rank.ORGANIZER: ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -15,12 +16,14 @@ keyboards_by_rank = {
 }
 
 keyboards_for_friend_request = {
-    Rank.USER: lambda f: InlineKeyboardMarkup().add(InlineKeyboardButton('Принять заявку', callback_data=f"acceptreq_{f.friend_id}"),
-                               InlineKeyboardButton('Отклонить заявку', callback_data=f"declinereq_{f.friend_id}"))
+    Rank.USER: lambda f: InlineKeyboardMarkup().add(
+        InlineKeyboardButton('Принять заявку', callback_data=f"acceptreq_{f.friend_id}"),
+        InlineKeyboardButton('Отклонить заявку', callback_data=f"declinereq_{f.friend_id}"))
 }
 
 keyboards_for_friend_list = {
-    Rank.USER: lambda f: InlineKeyboardMarkup().add(InlineKeyboardButton('Удалить из друзей', callback_data=f"deletefr_{f.friend_id}"))
+    Rank.USER: lambda f: InlineKeyboardMarkup().add(
+        InlineKeyboardButton('Удалить из друзей', callback_data=f"deletefr_{f.friend_id}"))
 }
 
 keyboards_by_status_event_and_by_rank = {

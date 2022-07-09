@@ -13,16 +13,16 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import sessionmaker
 
 from data import config
+from enums.friend_request_status import FriendRequestStatus
 from enums.ranks import Rank
 from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
-from enums.friend_request_status import FriendRequestStatus
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, EventUsers, Event, EventEditors
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
-from models.user import UserFriend
+from models.user import UserFriends
 
 
 def get_code_from_photo(file_name):
@@ -191,43 +191,38 @@ class Controller:
         self.db_session.commit_session()
 
     def get_friend_list(self, user):
-        return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == user.id,
-                                                              UserFriend.friend_id == User.id,
-                                                              UserFriend.friend_request_status == FriendRequestStatus.ACCEPTED) \
-            .with_entities(User.first_name, User.middle_name, User.last_name, UserFriend.friend_id).all()
+        return self.db_session.query(UserFriends, User).filter(UserFriends.user_id == user.id,
+                                                               UserFriends.friend_id == User.id,
+                                                               UserFriends.friend_request_status == FriendRequestStatus.ACCEPTED).all()
 
     def add_friend(self, uid, fid, status):
-        self.db_session.add_model(UserFriend(user_id=uid, friend_id=fid, friend_request_status=status))
+        self.db_session.add_model(UserFriends(user_id=uid, friend_id=fid, friend_request_status=status))
 
     def get_friend_requests(self, uid):
-        return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == uid,
-                                                              UserFriend.friend_id == User.id,
-                                                              UserFriend.friend_request_status == FriendRequestStatus.WAITING) \
-            .with_entities(User.first_name, User.middle_name, User.last_name, User.id, UserFriend.friend_id).all()
+        return self.db_session.query(UserFriends, User).filter(UserFriends.user_id == uid,
+                                                               UserFriends.friend_id == User.id,
+                                                               UserFriends.friend_request_status == FriendRequestStatus.WAITING).all()
 
     def accept_friend_request(self, uid, fid):
-        request = self.db_session.query(UserFriend).filter(UserFriend.user_id == uid, UserFriend.friend_id == fid) \
-            .one()
+        request = self.db_session.query(UserFriends).filter(UserFriends.user_id == uid,
+                                                            UserFriends.friend_id == fid).one()
         request.friend_request_status = FriendRequestStatus.ACCEPTED
         self.db_session.commit_session()
 
     def decline_friend_request(self, uid, fid):
-        request = self.db_session.query(UserFriend).filter(UserFriend.user_id == uid, UserFriend.friend_id == fid) \
-            .one()
-        request2 = self.db_session.query(UserFriend).filter(UserFriend.user_id == fid, UserFriend.friend_id == uid) \
-            .one()
+        request = self.db_session.query(UserFriends).filter(UserFriends.user_id == uid,
+                                                            UserFriends.friend_id == fid).one()
+        request2 = self.db_session.query(UserFriends).filter(UserFriends.user_id == fid,
+                                                             UserFriends.friend_id == uid).one()
         self.db_session.delete_model(request)
         self.db_session.delete_model(request2)
         self.db_session.commit_session()
 
     def delete_friend(self, uid, fid):
-        request = self.db_session.query(UserFriend).filter(UserFriend.user_id == uid, UserFriend.friend_id == fid,
-                                                           UserFriend.friend_request_status == FriendRequestStatus.ACCEPTED) \
-            .one()
-        request2 = self.db_session.query(UserFriend).filter(UserFriend.user_id == fid, UserFriend.friend_id == uid,
-                                                            UserFriend.friend_request_status == FriendRequestStatus.ACCEPTED) \
-            .one()
+        request = self.db_session.query(UserFriends).filter(UserFriends.user_id == uid, UserFriends.friend_id == fid,
+                                                            UserFriends.friend_request_status == FriendRequestStatus.ACCEPTED).one()
+        request2 = self.db_session.query(UserFriends).filter(UserFriends.user_id == fid, UserFriends.friend_id == uid,
+                                                             UserFriends.friend_request_status == FriendRequestStatus.ACCEPTED).one()
         self.db_session.delete_model(request)
         self.db_session.delete_model(request2)
         self.db_session.commit_session()
-

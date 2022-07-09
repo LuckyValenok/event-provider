@@ -17,7 +17,7 @@ class UserAchievements(BaseModel):
     achievement_id = Column(Integer, ForeignKey('achievement.id', ondelete='CASCADE'), nullable=False, index=True)
 
 
-class UserFriend(BaseModel):
+class UserFriends(BaseModel):
     __tablename__ = 'user_friends'
 
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)

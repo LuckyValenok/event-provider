@@ -6,9 +6,9 @@ from sqlalchemy.exc import NoResultFound
 
 from controller import Controller, get_code_from_photo
 from data.keyboards import keyboards_by_rank
+from enums.friend_request_status import FriendRequestStatus
 from enums.ranks import Rank
 from enums.steps import Step
-from enums.friend_request_status import FriendRequestStatus
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, Interest, Achievement, LocalGroup
 
@@ -84,16 +84,20 @@ class EventDataInput(DataInput, ABC):
 
 
 class AddFriendRequestInput(DataInput, ABC):
-    def __init__(self, from_step):
-        super().__init__(from_step, Step.NONE)
+    def __init__(self):
+        super().__init__(Step.ADD_FRIEND, Step.NONE)
 
     async def abstract_input(self, controller: Controller, user: User, message: Message):
-        controller.add_friend(user.id, message.text, FriendRequestStatus.ACCEPTED)
-        controller.add_friend(message.text, user.id, FriendRequestStatus.WAITING)
-        return 'Заявка отправлена!'
-
-    def can_input(self, user: User, message: Message) -> bool:
-        return user.step == Step.ADD_FRIEND and message.text is not None
+        if message.text.lower() in 'отмена':
+            return 'Операция успешно отменена'
+        try:
+            uid = int(message.text)
+            controller.get_user_by_id(uid)
+            controller.add_friend(user.id, uid, FriendRequestStatus.ACCEPTED)
+            controller.add_friend(uid, user.id, FriendRequestStatus.WAITING)
+            return 'Заявка отправлена!'
+        except ValueError / NoResultFound:
+            return 'Такого пользователя нет. Попробуйте снова или напишите \'отмена\''
 
 
 class AppointAsInput(DataInput, ABC):
@@ -204,6 +208,7 @@ data_inputs = [
     EventDataInput(Step.EVENT_DATE, lambda e, m: e.set_date(datetime.strptime(m.text, "%d.%m.%Y %H:%M"))),
     FeedbackToEventInput(),
     MarkPresentInput(),
+    AddFriendRequestInput(),
     AppointAsInput(Step.NEW_ORGANIZER_ID, Step.NONE, Rank.ORGANIZER, 'организатором'),
     AppointAsInput(Step.NEW_MODER_ID, Step.NONE, Rank.MODER, 'модератором'),
     ManageSomethingDataInput(Step.INTEREST_NAME_FOR_ADD, Step.NONE, 'Интерес', Interest, Interest.name,
@@ -217,8 +222,8 @@ data_inputs = [
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_ADD, Step.NONE, 'Группа', LocalGroup, LocalGroup.name,
                              lambda n: LocalGroup(name=n)),
     ManageSomethingDataInput(Step.GROUP_NAME_FOR_REMOVE, Step.NONE, 'Группа', LocalGroup,
-                             LocalGroup.name, None),
-    AddFriendRequestInput(Step.ADD_FRIEND)]
+                             LocalGroup.name, None)
+]
 
 
 def get_data_input(user, message):
