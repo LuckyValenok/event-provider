@@ -67,7 +67,6 @@ def generate_image_achievements(user: User):
         return output
     finally:
         new_image.close()
-        output.close()
 
 
 class Controller:
@@ -126,10 +125,9 @@ class Controller:
 
     def get_events_not_participate_user(self, uid: int):
         now = datetime.datetime.now()
-        return self.db_session.query(Event).filter(
-            and_(~Event.users.any(User.id == uid), Event.date != None, Event.date < now,
-                 Event.status == StatusEvent.UNFINISHED, Event.description != None, Event.lng != None,
-                 Event.lat != None)).all()
+        return self.db_session.query(Event).filter(~Event.users.any(User.id == uid)).filter(
+            and_(Event.date != None, Event.date > now, Event.status == StatusEvent.UNFINISHED,
+                 Event.description != None, Event.lng != None, Event.lat != None)).all()
 
     def get_count_visited(self, eid: int) -> int:
         return len(self.db_session.query(User).filter(
@@ -138,8 +136,7 @@ class Controller:
     def get_visited_users(self, eid: int):
         return self.db_session.query(User).filter(
             and_(EventUsers.user_id == User.id, EventUsers.event_id == eid,
-                 EventUsers.status_attendion == StatusAttendion.ARRIVED, User.rank == Rank.USER))\
-            .with_entities(EventUsers.user_id, User.first_name, User.middle_name, User.last_name).all()
+                 EventUsers.status_attendion == StatusAttendion.ARRIVED, User.rank == Rank.USER)).all()
 
     def get_editor_event(self, uid: int) -> EventEditors:
         return self.db_session.query(EventEditors).filter(EventEditors.user_id == uid).one()
@@ -280,8 +277,7 @@ class Controller:
         self.db_session.commit_session()
 
     def get_rate_editor(self, oid):
-        return self.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == oid).with_entities(OrganizerRateUser.user_id)\
-            .one()
+        return self.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == oid).one()
 
     def get_achievement_by_creator(self, user: User) -> Achievement:
         return self.db_session.query(Achievement).filter(

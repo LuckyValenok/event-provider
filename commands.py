@@ -160,6 +160,7 @@ class GetMyProfileCommand(Command, ABC):
         image_achievements = generate_image_achievements(user)
         if image_achievements is not None:
             await message.answer_photo(photo=image_achievements, caption='Ваши достижения')
+            image_achievements.close()
 
     def can_execute(self, user: User, message: Message) -> bool:
         return 'мой профиль' in message.text.lower()
