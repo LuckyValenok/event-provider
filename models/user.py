@@ -3,6 +3,7 @@ from sqlalchemy.orm import relation
 
 from enums.ranks import Rank
 from enums.steps import Step
+from enums.friend_request_status import FriendRequestStatus
 from .achievement import Achievement
 from .basemodel import BaseModel
 from .interest import Interest
@@ -21,6 +22,7 @@ class UserFriend(BaseModel):
 
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     friend_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
+    friend_request_status = Column(Enum(FriendRequestStatus), nullable=True)
 
 
 class UserInterests(BaseModel):

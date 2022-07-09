@@ -32,6 +32,16 @@ class UnknownCallback(Callback, ABC):
         return True
 
 
+class AcceptFriendRequestCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        fid = query.data.split('_')[-1]
+        controller.accept_friend_request(user.id, fid)
+        await query.message.answer('Вы приняли заявку в друзья!')
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('acceptreq_') and user.rank == Rank.USER
+
+
 class ChangeDataInEventCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
@@ -340,6 +350,7 @@ callbacks = [TakePartCallback(),
              GetAttendentStatisticsCallback(),
              FeedbackStatisticsCallback(),
              ChangeDataInEventCallback(),
+             AcceptFriendRequestCallback(),
              UnknownCallback()]
 
 

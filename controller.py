@@ -17,6 +17,7 @@ from enums.ranks import Rank
 from enums.status_attendion import StatusAttendion
 from enums.status_event import StatusEvent
 from enums.steps import Step
+from enums.friend_request_status import FriendRequestStatus
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, EventUsers, Event, EventEditors
 from models.dbsession import DBSession
@@ -196,3 +197,15 @@ class Controller:
 
     def add_friend(self, uid, fid):
         self.db_session.add_model(UserFriend(user_id=uid, friend_id=fid))
+
+    def get_friend_requests(self, uid):
+        return self.db_session.query(UserFriend, User).filter(UserFriend.user_id == uid,
+                                                              UserFriend.friend_id == User.id,
+                                                              UserFriend.friend_request_status == FriendRequestStatus.WAITING) \
+            .with_entities(User.first_name, User.middle_name, User.last_name, User.id, UserFriend.friend_id).all()
+
+    def accept_friend_request(self, uid, fid):
+        request = self.db_session.query(UserFriend).filter(UserFriend.user_id == uid, UserFriend.friend_id == fid) \
+            .one()
+        request.friend_request_status = FriendRequestStatus.ACCEPTED
+        self.db_session.commit_session()
