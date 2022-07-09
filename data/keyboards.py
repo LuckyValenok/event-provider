@@ -29,7 +29,8 @@ keyboards_for_friend_list = {
 
 keyboard_for_visited_user = {
     Rank.ORGANIZER: lambda f: InlineKeyboardMarkup().add(
-        InlineKeyboardButton('Начислить баллы активности', callback_data=f"addrate_{f.user_id}"))
+        InlineKeyboardButton('Начислить баллы активности', callback_data=f"addrate_{f.user_id}"),
+        InlineKeyboardButton('Выдать достижение', callback_data=f"addachieve_{f.user_id}"))
 }
 
 keyboards_by_status_event_and_by_rank = {
@@ -44,9 +45,9 @@ keyboards_by_status_event_and_by_rank = {
             .row(InlineKeyboardButton('Отметить присутствующих', callback_data=f"marpr_{e.id}")),
     },
     StatusEvent.FINISHED: {
-        Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()
-            .add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{e.id}"),
-                 InlineKeyboardButton('Просмотреть отзывы', callback_data=f"fbst_{e.id}")),
+        Rank.ORGANIZER: lambda e: InlineKeyboardMarkup().add(InlineKeyboardButton('Статистика посещения', callback_data=f"atst_{e.id}"),
+                                                             InlineKeyboardButton('Просмотреть отзывы', callback_data=f"fbst_{e.id}")),
+        Rank.USER: lambda e: InlineKeyboardMarkup().add(InlineKeyboardButton('Оставить отзыв', callback_data=f"feb_{e.id}"))
     }
 }
 

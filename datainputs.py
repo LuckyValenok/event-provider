@@ -254,6 +254,17 @@ class AchievementImageDataInput(DataInput, ABC):
         return len(message.photo) != 0 and user.step == self.from_step
 
 
+class GiveAchievementInput(DataInput, ABC):
+    def __init__(self):
+        super().__init__(Step.GIVE_ACHIEVEMENT, Step.NONE, False)
+
+    async def abstract_input(self, controller: Controller, user: User, message: Message):
+        return ''
+
+    def can_input(self, user, message: Message) -> bool:
+        return user.step == Step.GIVE_ACHIEVEMENT
+
+
 data_inputs = [
     UserDataInput(Step.FIRST_NAME, Step.FIRST_NAME_ONLY, Step.MIDDLE_NAME, lambda u, t: u.set_first_name(t),
                   'Теперь введите отчество'),

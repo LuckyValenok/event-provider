@@ -20,6 +20,7 @@ from enums.status_event import StatusEvent
 from enums.steps import Step
 from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, EventUsers, Event, EventEditors, Achievement
+from models.achievement import UserAchievement
 from models.dbsession import DBSession
 from models.event import EventCodes, EventFeedbacks
 from models.user import UserFriends, OrganizerRateUser
@@ -67,7 +68,7 @@ def generate_image_achievements(user: User):
         return output
     finally:
         new_image.close()
-        output.close()
+
 
 
 class Controller:
@@ -126,10 +127,9 @@ class Controller:
 
     def get_events_not_participate_user(self, uid: int):
         now = datetime.datetime.now()
-        return self.db_session.query(Event).filter(
-            and_(~Event.users.any(User.id == uid), Event.date != None, Event.date < now,
-                 Event.status == StatusEvent.UNFINISHED, Event.description != None, Event.lng != None,
-                 Event.lat != None)).all()
+        return self.db_session.query(Event).filter(~Event.users.any(User.id == uid)).filter(
+            and_(Event.date != None, Event.date > now, Event.status == StatusEvent.UNFINISHED,
+                 Event.description != None, Event.lng != None, Event.lat != None)).all()
 
     def get_count_visited(self, eid: int) -> int:
         return len(self.db_session.query(User).filter(
@@ -286,3 +286,11 @@ class Controller:
     def get_achievement_by_creator(self, user: User) -> Achievement:
         return self.db_session.query(Achievement).filter(
             and_(Achievement.creator == user.id, Achievement.image == None)).one()
+
+    def get_achievement_list(self):
+        return self.db_session.query(Achievement).all()
+
+    def get_achievement_reciever(self, oid):
+        return self.db_session.query(UserAchievement).filter(UserAchievement.org_id == oid)\
+            .with_entities(UserAchievement.user_id)\
+            .one()
