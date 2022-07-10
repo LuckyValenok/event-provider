@@ -36,6 +36,7 @@ class UnknownCallback(Callback, ABC):
 
 class AcceptFriendRequestCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
         fid = query.data.split('_')[-1]
         controller.accept_friend_request(user.id, fid)
         await query.message.answer('Вы приняли заявку в друзья!')
@@ -46,6 +47,7 @@ class AcceptFriendRequestCallback(Callback, ABC):
 
 class DeclineFriendRequestCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
         fid = query.data.split('_')[-1]
         controller.decline_friend_request(user.id, fid)
         await query.message.answer('Вы отклонили заявку в друзья.')
@@ -56,6 +58,7 @@ class DeclineFriendRequestCallback(Callback, ABC):
 
 class DeleteFriendCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
         fid = query.data.split('_')[-1]
         controller.delete_friend(user.id, fid)
         await query.message.answer('Вы удалили этого пользователя из друзей.')
