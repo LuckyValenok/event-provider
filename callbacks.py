@@ -8,7 +8,7 @@ from data.keyboards import change_user_data_keyboard, change_event_data_keyboard
 from enums.ranks import Rank
 from enums.status_event import StatusEvent
 from enums.steps import Step
-from models import User, Interest, LocalGroup, UserInterests, UserGroups, EventEditors
+from models import User, Interest, LocalGroup, UserInterests, UserGroups, EventEditors, EventInterests, EventGroups
 from models.achievement import OrganizerToUserAchievement
 from models.basemodel import BaseModel
 from models.user import OrganizerRateUser
@@ -210,7 +210,8 @@ class ManageUserAttachmentCallback(Callback, ABC):
 
         if query.data.endswith(self.model.__tablename__):
             entities = controller.get_entities_by_model_with_relationship(user, self.model, self.relation_model,
-                                                                          self.relation_column, de_attach)
+                                                                          self.relation_column,
+                                                                          self.relation_model.user_id, de_attach)
             if len(entities) == 0:
                 await query.message.answer('Тут пусто')
             else:
@@ -228,6 +229,7 @@ class ManageUserAttachmentCallback(Callback, ABC):
 
                 await query.message.answer(
                     f'{entity.name} успешно {"добавлен в " + self.name.lower() if not de_attach else "удален из " + self.name_remove_form.lower()}')
+                await query.message.delete()
             except ValueError or NoResultFound:
                 await query.message.answer(f'{self.name} с этим названием отсутствуют')
 
@@ -242,11 +244,12 @@ class GetAttendentStatisticsCallback(Callback, ABC):
 
         visited_users = controller.get_visited_users(eid)
         for visited_user in visited_users:
-            keyboard = InlineKeyboardMarkup()\
-                .row(InlineKeyboardButton('Начислить баллы активности', callback_data=f"addrate_{visited_user.id}"))\
+            keyboard = InlineKeyboardMarkup() \
+                .row(InlineKeyboardButton('Начислить баллы активности', callback_data=f"addrate_{visited_user.id}")) \
                 .row(InlineKeyboardButton('Выдать достижение', callback_data=f"addachieve_{visited_user.id}"))
-            await query.message.answer(visited_user.first_name + " " + visited_user.middle_name + " " + visited_user.last_name,
-                                       reply_markup=keyboard)
+            await query.message.answer(
+                visited_user.first_name + " " + visited_user.middle_name + " " + visited_user.last_name,
+                reply_markup=keyboard)
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('atst_') and user.rank is Rank.ORGANIZER
@@ -427,6 +430,58 @@ class GiveAchievementCallback(Callback, ABC):
         return query.data.startswith('ach_') and user.rank is Rank.ORGANIZER
 
 
+class ManageEventAttachmentCallback(Callback, ABC):
+    def __init__(self, name, name_remove_form, model, model_name, relation_model, relation_column, _lambda):
+        self.name = name
+        self.name_remove_form = name_remove_form
+        self.model = model
+        self.model_name = model_name
+        self.relation_model = relation_model
+        self.relation_column = relation_column
+        self._lambda = _lambda
+
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        try:
+            args = query.data.split('_')
+            event_id = int(args[2])
+            event = controller.get_event_by_id(event_id)
+
+            de_attach = query.data.startswith('ede')
+
+            if len(args) == 3:
+                entities = controller.get_entities_by_model_with_relationship(event, self.model, self.relation_model,
+                                                                              self.relation_column,
+                                                                              self.relation_model.event_id, de_attach)
+                if len(entities) == 0:
+                    await query.message.answer('Тут пусто')
+                else:
+                    keyboard = InlineKeyboardMarkup()
+                    for entity in entities:
+                        keyboard.add(InlineKeyboardButton(entity.name,
+                                                          callback_data=f'{query.data}_{entity.id}'))
+                    await query.message.answer(f'Доступные {self.name.lower()}:', reply_markup=keyboard)
+            else:
+                try:
+                    eid = int(args[3])
+                    entity = controller.get_entity_by_model_id(self.model, eid)
+                    self._lambda(event, entity, not de_attach)
+                    controller.save()
+
+                    await query.message.answer(
+                        f'{entity.name} успешно {"добавлен в " + self.name.lower() if not de_attach else "удален из " + self.name_remove_form.lower()}')
+                    await query.message.delete()
+                except ValueError or NoResultFound:
+                    await query.message.answer(f'{self.name} с этим названием отсутствуют')
+        except ValueError or NoResultFound:
+            await query.message.answer('Такое мероприятие отсутствует')
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return (query.data.startswith('eat_' + self.model_name) or query.data.startswith(
+            'edeat_' + self.model_name)) and user.rank is Rank.ORGANIZER
+
+
 callbacks = [TakePartCallback(),
              UserFeedbackCallback(),
              CancelEventCallback(),
@@ -437,6 +492,11 @@ callbacks = [TakePartCallback(),
                                           lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
              ManageUserAttachmentCallback('Группы', 'Групп', LocalGroup, UserGroups, UserGroups.group_id,
                                           lambda u, g, a: u.groups.append(g) if a else u.groups.remove(g)),
+             ManageEventAttachmentCallback('Интересы', 'Интересов', Interest, 'interest', EventInterests,
+                                           EventInterests.interest_id,
+                                           lambda e, i, a: e.interests.append(i) if a else e.interests.remove(i)),
+             ManageEventAttachmentCallback('Группы', 'Групп', LocalGroup, 'group', EventGroups, EventGroups.group_id,
+                                           lambda e, g, a: e.groups.append(g) if a else e.groups.remove(g)),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'add', Step.INTEREST_NAME_FOR_ADD,
                                      'Напишите название нового интереса'),
              ManageSomethingCallback(Rank.ADMIN, Interest, 'remove', Step.INTEREST_NAME_FOR_REMOVE,

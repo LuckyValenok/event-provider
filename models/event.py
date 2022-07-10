@@ -86,3 +86,10 @@ class Event(BaseModel):
     def set_location(self, location):
         self.lat = location.latitude
         self.lng = location.longitude
+
+    def __repr__(self):
+        return f'⭐️Название: {self.name}\n' \
+               f'├    Описание: {self.description if self.description is not None else "отсутствует"}\n' \
+               f'├    Дата: {self.date if self.date is not None else "не назначена"}\n' \
+               f'├    Интересы: {", ".join([interest.name for interest in self.interests]) if len(self.interests) != 0 else "отсутствуют"}\n' \
+               f'└    Группы: {", ".join([group.name for group in self.groups]) if len(self.groups) != 0 else "отсутствуют"}'

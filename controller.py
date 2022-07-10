@@ -226,11 +226,14 @@ class Controller:
     def add_code(self, event, user, code):
         self.db_session.add_model(EventCodes(event_id=event.id, user_id=user.id, code=code))
 
-    def get_entities_by_model_with_relationship(self, user, model, relation_model, relation_column, de_attach):
+    def get_entities_by_model_with_relationship(self, entity, model, relation_model, relation_column,
+                                                relation_column_entity_id, de_attach):
         return self.db_session.query(model).filter(model.id.not_in(
             self.db_session.query(relation_model).with_entities(relation_column).filter(
-                relation_model.user_id == user.id))).all() if not de_attach else self.db_session.query(model).filter(
-            relation_model.user_id == user.id).all()
+                relation_column_entity_id == entity.id))).all() if not de_attach \
+            else self.db_session.query(model).filter(
+            model.id.in_(self.db_session.query(relation_model).with_entities(relation_column)
+                         .filter(relation_column_entity_id == entity.id))).all()
 
     def save(self):
         self.db_session.commit_session()

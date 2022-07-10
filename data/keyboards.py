@@ -21,7 +21,11 @@ keyboards_by_status_event_and_by_rank = {
     StatusEvent.UNFINISHED: {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()
             .row(InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}"))
-            .row(InlineKeyboardButton('Завершить мероприятие', callback_data=f"ende_{e.id}")),
+            .row(InlineKeyboardButton('Завершить мероприятие', callback_data=f"ende_{e.id}"))
+            .row(InlineKeyboardButton('Добавить группу', callback_data=f'eat_group_{e.id}'),
+                 InlineKeyboardButton('Удалить группу', callback_data=f'edeat_group_{e.id}'))
+            .row(InlineKeyboardButton('Добавить интерес', callback_data=f'eat_interest_{e.id}'),
+                 InlineKeyboardButton('Удалить интерес', callback_data=f'edeat_interest_{e.id}')),
         Rank.USER: lambda e: InlineKeyboardMarkup()
             .add(InlineKeyboardButton('Отменить заявку на участие', callback_data=f"ecan_{e.id}")),
         Rank.MODER: lambda e: InlineKeyboardMarkup()
