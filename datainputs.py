@@ -117,7 +117,8 @@ class GiveRatingInput(DataInput, ABC):
         uid = controller.get_rate_editor(user.id)
         amount = int(message.text)
         controller.give_rate(uid.user_id, amount)
-        req = controller.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == user.id, OrganizerRateUser.user_id == uid.user_id).one()
+        req = controller.db_session.query(OrganizerRateUser).filter(OrganizerRateUser.org_id == user.id,
+                                                                    OrganizerRateUser.user_id == uid.user_id).one()
         controller.db_session.delete_model(req)
         return 'Баллы успешно начислены!'
 
@@ -141,6 +142,8 @@ class AppointAsInput(DataInput, ABC):
             try:
                 target_user = controller.get_user_by_id(uid)
                 target_user.rank = self.rank
+                await message.bot.send_message(chat_id=target_user.id, text=f'Вас назначили {self.name}',
+                                               reply_markup=keyboards_by_rank[self.rank])
                 return f'{target_user.first_name} {target_user.middle_name} {target_user.last_name} успешно назначен {self.name}'
             except NoResultFound:
                 user.step = self.from_step
