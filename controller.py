@@ -22,8 +22,8 @@ from exceptions import NotFoundObjectError, ObjectAlreadyCreatedError
 from models import User, EventUsers, Event, EventEditors, Achievement
 from models.achievement import OrganizerToUserAchievement
 from models.dbsession import DBSession
-from models.event import EventCodes, EventFeedbacks
-from models.user import UserFriends, OrganizerRateUser
+from models.event import EventCodes, EventFeedbacks, EventGroups, EventInterests
+from models.user import UserFriends, OrganizerRateUser, UserGroups, UserInterests
 
 
 def get_code_from_photo(_bytes: BytesIO):
@@ -298,3 +298,17 @@ class Controller:
 
     def get_achievement_by_id(self, aid: int):
         return self.db_session.query(Achievement).filter(Achievement.id == aid).one()
+
+    def get_users_not_at_event(self, event: Event):
+        query = self.db_session.query(User).filter(
+            User.id.not_in(self.db_session.query(EventUsers).with_entities(EventUsers.user_id).filter(
+                EventUsers.event_id == event.id)))
+        if len(event.groups) > 0:
+            query = query.filter(User.id.in_(
+                self.db_session.query(EventGroups).join(UserGroups, EventGroups.group_id == UserGroups.group_id).filter(
+                    EventGroups.event_id == event.id).with_entities(UserGroups.user_id)))
+        if len(event.interests) > 0:
+            query = query.filter(User.id.in_(self.db_session.query(EventInterests).join(UserInterests,
+                                                                                        EventInterests.interest_id == UserInterests.interest_id).filter(
+                EventInterests.event_id == event.id).with_entities(UserInterests.user_id)))
+        return query.all()

@@ -20,7 +20,8 @@ keyboards_by_rank = {
 keyboards_by_status_event_and_by_rank = {
     StatusEvent.UNFINISHED: {
         Rank.ORGANIZER: lambda e: InlineKeyboardMarkup()
-            .row(InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}"))
+            .row(InlineKeyboardButton('Редактировать мероприятие', callback_data=f"ech_{e.id}"),
+                 InlineKeyboardButton('Оповестить пользователей', callback_data=f"notif_{e.id}"))
             .row(InlineKeyboardButton('Завершить мероприятие', callback_data=f"ende_{e.id}"))
             .row(InlineKeyboardButton('Добавить группу', callback_data=f'eat_group_{e.id}'),
                  InlineKeyboardButton('Удалить группу', callback_data=f'edeat_group_{e.id}'))

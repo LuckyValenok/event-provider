@@ -312,9 +312,10 @@ class CancelEventCallback(Callback, ABC):
     async def callback(self, controller: Controller, user: User, query: CallbackQuery):
         await query.answer()
 
-        eid = int(query.data.split('_')[-1])
         try:
+            eid = int(query.data.split('_')[-1])
             event = controller.get_event_by_id(eid)
+
             if user in event.users and event.status == StatusEvent.UNFINISHED:
                 event.users.remove(user)
 
@@ -482,12 +483,39 @@ class ManageEventAttachmentCallback(Callback, ABC):
             'edeat_' + self.model_name)) and user.rank is Rank.ORGANIZER
 
 
+class NotificationEventCallback(Callback, ABC):
+    async def callback(self, controller: Controller, user: User, query: CallbackQuery):
+        await query.answer()
+
+        try:
+            event_id = int(query.data.split('_')[-1])
+            event = controller.get_event_by_id(event_id)
+
+            if event.description is None or event.lat is None or event.lng is None or event.date is None:
+                await query.message.answer('Для уведомления у мероприятия должно быть указано описание, дата и локация')
+                return
+
+            users = controller.get_users_not_at_event(event)
+            text = f'{user.first_name} {user.middle_name} {user.last_name} приглашает вас поучаствовать в мероприятии {event.name}'
+            for user in controller.get_users_not_at_event(event):
+                await query.bot.send_message(chat_id=user.id,
+                                             text=text)
+
+            await query.message.answer(f'{len(users)} уведомлений было отправлено')
+        except ValueError or NoResultFound:
+            await query.message.answer('Такое мероприятие отсутствует')
+
+    def can_callback(self, user: User, query: CallbackQuery) -> bool:
+        return query.data.startswith('notif_') and user.rank is Rank.ORGANIZER
+
+
 callbacks = [TakePartCallback(),
              UserFeedbackCallback(),
              CancelEventCallback(),
              MarkPresentCallback(),
              ChangeDataInUserCallback(),
              EndEventCallback(),
+             NotificationEventCallback(),
              ManageUserAttachmentCallback('Интересы', 'Интересов', Interest, UserInterests, UserInterests.interest_id,
                                           lambda u, i, a: u.interests.append(i) if a else u.interests.remove(i)),
              ManageUserAttachmentCallback('Группы', 'Групп', LocalGroup, UserGroups, UserGroups.group_id,
