@@ -37,6 +37,11 @@ async def send_menu(message: Message):
         await message.answer('Буп', reply_markup=keyboards_by_rank[user.rank])
 
 
+@dp.message_handler(commands=['id'])
+async def send_id(message: Message):
+    await message.answer(f"Ваш ID: {message.from_user.id}")
+
+
 @dp.message_handler(content_types=[ContentType.PHOTO, ContentType.TEXT, ContentType.LOCATION])
 async def send_other(message: Message):
     user = controller.get_user_by_id(message.from_user.id)
