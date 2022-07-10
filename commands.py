@@ -6,6 +6,7 @@ from controller import Controller, generate_image_achievements
 from data.keyboards import profile_inline_keyboard, keyboards_by_status_event_and_by_rank
 from enums.ranks import Rank
 from enums.steps import Step
+from formatter import plurals
 from models import User, Interest, LocalGroup
 from models.basemodel import BaseModel
 
@@ -94,7 +95,7 @@ class GetAllEventsCommand(Command, ABC):
                 keyboard = InlineKeyboardMarkup().add(
                     InlineKeyboardButton('Записаться на мероприятие', callback_data=f'tp_{event.id}'))
                 friends = controller.get_friends_on_event(user, event)
-                friends_str = f'\n\n{len(friends)} ваших друзей на этом мероприятии: {", ".join(f"{friend.first_name} {friend.middle_name} {friend.last_name}" for friend in friends)}' if len(
+                friends_str = f'\n\n{plurals(len(friends), "ваш друг", "ваших друга", "ваших друзей")} на этом мероприятии: {", ".join(f"{friend.first_name} {friend.middle_name} {friend.last_name}" for friend in friends)}' if len(
                     friends) != 0 else ''
                 if event.lat is not None and event.lng is not None:
                     await message.answer_location(event.lat, event.lng)
