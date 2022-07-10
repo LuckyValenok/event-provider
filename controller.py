@@ -312,3 +312,10 @@ class Controller:
                                                                                         EventInterests.interest_id == UserInterests.interest_id).filter(
                 EventInterests.event_id == event.id).with_entities(UserInterests.user_id)))
         return query.all()
+
+    def get_friends_on_event(self, user, event):
+        return self.db_session.query(User).filter(UserFriends.friend_id == user.id).filter(
+            UserFriends.friend_request_status == FriendRequestStatus.ACCEPTED).filter(
+            UserFriends.user_id == User.id).filter(
+            User.id.in_(self.db_session.query(EventUsers).with_entities(EventUsers.user_id).filter(
+                EventUsers.event_id == event.id))).all()

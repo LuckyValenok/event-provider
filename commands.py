@@ -32,7 +32,7 @@ class GetFriendListCommand(Command, ABC):
                 await message.answer(friend[0] + " " + friend[1] + " " + friend[2], reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
-        return user.rank == Rank.USER and 'мои друзья' in message.text.lower()
+        return (user.rank == Rank.USER or user.rank == Rank.MODER) and 'мои друзья' in message.text.lower()
 
 
 class GetFriendRequestListCommand(Command, ABC):
@@ -49,7 +49,7 @@ class GetFriendRequestListCommand(Command, ABC):
                                      reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
-        return user.rank == Rank.USER and 'мои заявки в друзья' in message.text.lower()
+        return (user.rank == Rank.USER or user.rank == Rank.MODER) and 'мои заявки в друзья' in message.text.lower()
 
 
 class AddFriendCommand(Command, ABC):
@@ -59,7 +59,7 @@ class AddFriendCommand(Command, ABC):
         await message.answer("Введите телеграмм-id друга:", reply_markup=ReplyKeyboardRemove())
 
     def can_execute(self, user: User, message: Message) -> bool:
-        return user.rank == Rank.USER and 'добавить друга' in message.text.lower()
+        return (user.rank == Rank.USER or user.rank == Rank.MODER) and 'добавить друга' in message.text.lower()
 
 
 class GetMyEventsCommand(Command, ABC):
@@ -93,9 +93,12 @@ class GetAllEventsCommand(Command, ABC):
             for event in events:
                 keyboard = InlineKeyboardMarkup().add(
                     InlineKeyboardButton('Записаться на мероприятие', callback_data=f'tp_{event.id}'))
+                friends = controller.get_friends_on_event(user, event)
+                friends_str = f'\n\n{len(friends)} ваших друзей на этом мероприятии: {", ".join(f"{friend.first_name} {friend.middle_name} {friend.last_name}" for friend in friends)}' if len(
+                    friends) != 0 else ''
                 if event.lat is not None and event.lng is not None:
                     await message.answer_location(event.lat, event.lng)
-                await message.answer(str(event), reply_markup=keyboard)
+                await message.answer(f'{event}{friends_str}', reply_markup=keyboard)
 
     def can_execute(self, user: User, message: Message) -> bool:
         return (user.rank == Rank.USER or
