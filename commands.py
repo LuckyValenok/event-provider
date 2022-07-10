@@ -111,15 +111,17 @@ class AddSomethingCommand(Command, ABC):
     step: Step
     name: str
 
-    def __init__(self, rank, step, name, _type):
+    def __init__(self, rank, step, name, _type, name_in_message=None):
         self.rank = rank
         self.step = step
         self.name = name
         self._type = _type
+        self.name_in_message = name_in_message
 
     async def execute(self, controller: Controller, user: User, message: Message):
         controller.set_step_to_user(user, self.step)
-        await message.answer(f'Ввведите {self._type} нового {self.name}')
+        await message.answer(
+            f'Ввведите {self._type} нового {self.name_in_message if self.name_in_message is not None else self.name}')
 
     def can_execute(self, user: User, message: Message) -> bool:
         return user.rank == self.rank and f'добавить {self.name}' in message.text.lower()
@@ -183,7 +185,7 @@ commands = [GetMyEventsCommand(),
             AddSomethingCommand(Rank.ADMIN, Step.NEW_ORGANIZER_ID, 'организатора', 'ID'),
             AddSomethingCommand(Rank.ORGANIZER, Step.NEW_MODER_ID, 'модератора', 'ID'),
             AddSomethingCommand(Rank.ORGANIZER, Step.EVENT_NAME, 'мероприятие', 'название'),
-            AddSomethingCommand(Rank.ORGANIZER, Step.ACHIEVEMENT_NAME, 'достижение', 'название')]
+            AddSomethingCommand(Rank.ORGANIZER, Step.ACHIEVEMENT_NAME, 'достижение', 'название', 'достижения')]
 unknown_command = UnknownCommand()
 
 
