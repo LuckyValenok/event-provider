@@ -155,7 +155,8 @@ class GetMyProfileCommand(Command, ABC):
                f'├ Номер телефона: {user.phone}\n' \
                f'├ Почта: {user.email}\n' \
                f'├ Ваши группы: {", ".join([group.name for group in user.groups]) if len(user.groups) != 0 else "отсутствуют"}\n' \
-               f'└ Ваши интересы {", ".join([interest.name for interest in user.interests]) if len(user.interests) != 0 else "отсутствуют"}'
+               f'├ Ваши интересы {", ".join([interest.name for interest in user.interests]) if len(user.interests) != 0 else "отсутствуют"}\n' \
+               f'└ Ваш рейтинг: {user.rating}'
         await message.answer(text, reply_markup=profile_inline_keyboard)
         image_achievements = generate_image_achievements(user)
         if image_achievements is not None:

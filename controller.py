@@ -247,6 +247,10 @@ class Controller:
     def add_friend(self, uid, fid, status):
         self.db_session.add_model(UserFriends(user_id=uid, friend_id=fid, friend_request_status=status))
 
+    def has_friend_request(self, uid, fid):
+        return self.db_session.query(UserFriends).filter(UserFriends.user_id == uid,
+                                                         UserFriends.friend_id == fid).one_or_none() is not None
+
     def get_friend_requests(self, uid):
         return self.db_session.query(UserFriends, User).filter(UserFriends.user_id == uid,
                                                                UserFriends.friend_id == User.id,

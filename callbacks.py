@@ -40,6 +40,7 @@ class AcceptFriendRequestCallback(Callback, ABC):
         fid = query.data.split('_')[-1]
         controller.accept_friend_request(user.id, fid)
         await query.message.answer('Вы приняли заявку в друзья!')
+        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('acceptreq_') and user.rank == Rank.USER
@@ -51,6 +52,7 @@ class DeclineFriendRequestCallback(Callback, ABC):
         fid = query.data.split('_')[-1]
         controller.decline_friend_request(user.id, fid)
         await query.message.answer('Вы отклонили заявку в друзья.')
+        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('declinereq_') and user.rank == Rank.USER
@@ -62,6 +64,7 @@ class DeleteFriendCallback(Callback, ABC):
         fid = query.data.split('_')[-1]
         controller.delete_friend(user.id, fid)
         await query.message.answer('Вы удалили этого пользователя из друзей.')
+        await query.message.delete()
 
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('deletefr_') and user.rank == Rank.USER
@@ -81,6 +84,7 @@ class ChangeDataInEventCallback(Callback, ABC):
 
             await query.message.answer('Пожалуйста, выберите параметр, который Вы хотите изменить.',
                                        reply_markup=change_event_data_keyboard)
+            await query.message.delete()
 
         except ValueError:
             if _type in 'name':
@@ -220,7 +224,7 @@ class ManageUserAttachmentCallback(Callback, ABC):
             else:
                 keyboard = InlineKeyboardMarkup()
                 for entity in entities:
-                    keyboard.add(InlineKeyboardButton(entity.name,
+                    keyboard.insert(InlineKeyboardButton(entity.name,
                                                       callback_data=query.data + '_' + str(entity.id)))
                 await query.message.answer(f'Доступные {self.name.lower()}:', reply_markup=keyboard)
         else:
@@ -385,6 +389,8 @@ class EndEventCallback(Callback, ABC):
         except NoResultFound:
             await query.message.answer('Такого мероприятия нет')
 
+        await query.message.delete()
+
     def can_callback(self, user: User, query: CallbackQuery) -> bool:
         return query.data.startswith('ende_') and user.rank is Rank.ORGANIZER
 
@@ -399,8 +405,8 @@ class GiveAchievementListCallback(Callback, ABC):
             achievements = controller.get_achievement_list()
             replKeyboard = InlineKeyboardMarkup()
             for achievement in achievements:
-                replKeyboard.add(InlineKeyboardButton(f'{achievement.name}', callback_data=f'ach_{achievement.id}'))
-            await query.message.answer('Выберете достижение, которое хотите выдать пользователю: ',
+                replKeyboard.insert(InlineKeyboardButton(f'{achievement.name}', callback_data=f'ach_{achievement.id}'))
+            await query.message.answer('Выберите достижение, которое хотите выдать пользователю: ',
                                        reply_markup=replKeyboard)
         else:
             await query.message.answer('Такого пользователя нет')
@@ -463,7 +469,7 @@ class ManageEventAttachmentCallback(Callback, ABC):
                 else:
                     keyboard = InlineKeyboardMarkup()
                     for entity in entities:
-                        keyboard.add(InlineKeyboardButton(entity.name,
+                        keyboard.insert(InlineKeyboardButton(entity.name,
                                                           callback_data=f'{query.data}_{entity.id}'))
                     await query.message.answer(f'Доступные {self.name.lower()}:', reply_markup=keyboard)
             else:

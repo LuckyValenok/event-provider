@@ -101,6 +101,8 @@ class AddFriendRequestInput(DataInput, ABC):
         try:
             uid = int(message.text)
             controller.get_user_by_id(uid)
+            if controller.has_friend_request(user.id, uid):
+                return 'Вы уже отправили этому человеку запрос на дружбу'
             controller.add_friend(user.id, uid, FriendRequestStatus.ACCEPTED)
             controller.add_friend(uid, user.id, FriendRequestStatus.WAITING)
             return 'Заявка отправлена!'

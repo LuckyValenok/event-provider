@@ -50,23 +50,23 @@ async def send_other(message: Message):
     if data_input is not None:
         await data_input.input(controller, user, message)
         return
-    if user.step != Step.NONE:
-        await message.answer('Для начала завершите предыдущее действие, пожалуйста')
-        return
     command = get_command(user, message)
     if command is not None:
-        await command.execute(controller, user, message)
+        if user.step != Step.NONE:
+            await message.answer('Для начала завершите предыдущее действие, пожалуйста')
+        else:
+            await command.execute(controller, user, message)
 
 
 @dp.callback_query_handler()
 async def process_callback(query: CallbackQuery):
     user = controller.get_user_by_id(query.from_user.id)
-    if user.step != Step.NONE:
-        await query.message.answer('Для начала завершите предыдущее действие, пожалуйста')
-        return
     callback = get_callback(user, query)
     if callback is not None:
-        await callback.callback(controller, user, query)
+        if user.step != Step.NONE:
+            await query.message.answer('Для начала завершите предыдущее действие, пожалуйста')
+        else:
+            await callback.callback(controller, user, query)
     else:
         await query.answer()
 
